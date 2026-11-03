@@ -1,0 +1,34 @@
+# Production setup for your home server (ZimaOS).
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   App -> http://<server-ip>:8080
+#
+# - web: nginx serving the built React app, forwarding /api to the API
+# - api: compiled Node API, NOT reachable from outside (only via nginx)
+# - the SQLite database is stored in DATA_DIR on the server, so it survives
+#   rebuilds and updates. Back it up by copying that folder.
+
+services:
+  api:
+    build:
+      context: ./api
+      target: prod
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: 3001
+      DB_PATH: /app/data/bgg.sqlite
+    volumes:
+      - ${DATA_DIR:-/DATA/AppData/bgg-game-night/data}:/app/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      target: prod
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - api
+    restart: unless-stopped

@@ -1,0 +1,41 @@
+# Local development: `docker compose up --build`
+#   React app  -> http://localhost:5173
+#   API        -> http://localhost:3001/api/health
+#
+# The database file is saved in api/data/ on your Mac (git-ignored).
+# For ZimaOS, use docker-compose.prod.yml instead.
+#
+# Your source folders are mounted into the containers, so saving a file
+# hot-reloads the app. node_modules stay inside the container (anonymous volume)
+# so Mac and Linux binaries never clash.
+
+services:
+  api:
+    build:
+      context: ./api
+      target: dev
+    env_file:
+      - path: .env
+        required: false # no .env yet? the API just runs in mock mode
+    environment:
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./api:/app
+      - /app/node_modules
+
+  web:
+    build:
+      context: ./web
+      target: dev
+    environment:
+      API_URL: http://api:3001 # Vite proxies /api/* here (service name = hostname)
+      VITE_POLL: "true"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    depends_on:
+      - api

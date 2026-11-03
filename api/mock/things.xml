@@ -1,0 +1,529 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SAMPLE DATA for mock mode. Shaped like BGG /xmlapi2/thing?stats=1; values are approximate. -->
+<items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+  <item type="boardgame" id="13">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="3">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="4+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="2.28" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="822">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="2">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="5">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="5+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="1.89" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="9209">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="2">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="5">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="5+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="1.82" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="30549">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="2">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="4+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="2.4" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="68448">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="2">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="5">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="6">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="7">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="7+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="2.32" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="230802">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="2">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="4+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="1.76" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="266192">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="1">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="2">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="5">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="5+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="2.45" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="178900">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="2">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="5">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="6">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="7">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="8">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="8+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="1.27" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="167791">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="1">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="2">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="5">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="5+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="3.26" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="174430">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="1">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="2">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="4+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="3.91" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="148228">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="2">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="4+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="1.79" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="36218">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="2">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="4+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="2.35" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="224517">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="2">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="4+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="3.87" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="295947">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="1">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="2">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="4+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="1.85" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="133473">
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="2">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="30" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="5">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="60" />
+        <result value="Not Recommended" numvotes="20" />
+      </results>
+      <results numplayers="5+">
+        <result value="Best" numvotes="2" />
+        <result value="Recommended" numvotes="18" />
+        <result value="Not Recommended" numvotes="80" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <numweights value="1000" />
+        <averageweight value="1.16" />
+      </ratings>
+    </statistics>
+  </item>
+</items>

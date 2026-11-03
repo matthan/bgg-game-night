@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<!-- SAMPLE DATA for mock mode. Shaped like a real BGG /xmlapi2/collection?stats=1 response; numbers are illustrative. -->
+<items totalitems="15" termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+  <item objecttype="thing" objectid="13" subtype="boardgame" collid="13">
+    <name sortindex="1">CATAN</name>
+    <yearpublished>1995</yearpublished>
+    <stats minplayers="3" maxplayers="4" minplaytime="60" maxplaytime="120" playingtime="120" numowned="0">
+      <rating value="7.0">
+        <average value="7.1" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>12</numplays>
+  </item>
+  <item objecttype="thing" objectid="822" subtype="boardgame" collid="822">
+    <name sortindex="1">Carcassonne</name>
+    <yearpublished>2000</yearpublished>
+    <stats minplayers="2" maxplayers="5" minplaytime="30" maxplaytime="45" playingtime="45" numowned="0">
+      <rating value="7.5">
+        <average value="7.4" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>20</numplays>
+  </item>
+  <item objecttype="thing" objectid="9209" subtype="boardgame" collid="9209">
+    <name sortindex="1">Ticket to Ride</name>
+    <yearpublished>2004</yearpublished>
+    <stats minplayers="2" maxplayers="5" minplaytime="30" maxplaytime="60" playingtime="60" numowned="0">
+      <rating value="8.0">
+        <average value="7.4" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>15</numplays>
+  </item>
+  <item objecttype="thing" objectid="30549" subtype="boardgame" collid="30549">
+    <name sortindex="1">Pandemic</name>
+    <yearpublished>2008</yearpublished>
+    <stats minplayers="2" maxplayers="4" minplaytime="45" maxplaytime="45" playingtime="45" numowned="0">
+      <rating value="N/A">
+        <average value="7.5" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>8</numplays>
+  </item>
+  <item objecttype="thing" objectid="68448" subtype="boardgame" collid="68448">
+    <name sortindex="1">7 Wonders</name>
+    <yearpublished>2010</yearpublished>
+    <stats minplayers="2" maxplayers="7" minplaytime="30" maxplaytime="30" playingtime="30" numowned="0">
+      <rating value="8.0">
+        <average value="7.7" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>10</numplays>
+  </item>
+  <item objecttype="thing" objectid="230802" subtype="boardgame" collid="230802">
+    <name sortindex="1">Azul</name>
+    <yearpublished>2017</yearpublished>
+    <stats minplayers="2" maxplayers="4" minplaytime="30" maxplaytime="45" playingtime="45" numowned="0">
+      <rating value="8.5">
+        <average value="7.7" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>25</numplays>
+  </item>
+  <item objecttype="thing" objectid="266192" subtype="boardgame" collid="266192">
+    <name sortindex="1">Wingspan</name>
+    <yearpublished>2019</yearpublished>
+    <stats minplayers="1" maxplayers="5" minplaytime="40" maxplaytime="70" playingtime="70" numowned="0">
+      <rating value="9.0">
+        <average value="8.0" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>9</numplays>
+  </item>
+  <item objecttype="thing" objectid="178900" subtype="boardgame" collid="178900">
+    <name sortindex="1">Codenames</name>
+    <yearpublished>2015</yearpublished>
+    <stats minplayers="2" maxplayers="8" minplaytime="15" maxplaytime="15" playingtime="15" numowned="0">
+      <rating value="7.0">
+        <average value="7.5" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>30</numplays>
+  </item>
+  <item objecttype="thing" objectid="167791" subtype="boardgame" collid="167791">
+    <name sortindex="1">Terraforming Mars</name>
+    <yearpublished>2016</yearpublished>
+    <stats minplayers="1" maxplayers="5" minplaytime="120" maxplaytime="120" playingtime="120" numowned="0">
+      <rating value="9.0">
+        <average value="8.3" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>6</numplays>
+  </item>
+  <item objecttype="thing" objectid="174430" subtype="boardgame" collid="174430">
+    <name sortindex="1">Gloomhaven</name>
+    <yearpublished>2017</yearpublished>
+    <stats minplayers="1" maxplayers="4" minplaytime="60" maxplaytime="120" playingtime="120" numowned="0">
+      <rating value="N/A">
+        <average value="8.6" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>3</numplays>
+  </item>
+  <item objecttype="thing" objectid="148228" subtype="boardgame" collid="148228">
+    <name sortindex="1">Splendor</name>
+    <yearpublished>2014</yearpublished>
+    <stats minplayers="2" maxplayers="4" minplaytime="30" maxplaytime="30" playingtime="30" numowned="0">
+      <rating value="7.5">
+        <average value="7.4" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>18</numplays>
+  </item>
+  <item objecttype="thing" objectid="36218" subtype="boardgame" collid="36218">
+    <name sortindex="1">Dominion</name>
+    <yearpublished>2008</yearpublished>
+    <stats minplayers="2" maxplayers="4" minplaytime="30" maxplaytime="30" playingtime="30" numowned="0">
+      <rating value="N/A">
+        <average value="7.6" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>0</numplays>
+  </item>
+  <item objecttype="thing" objectid="224517" subtype="boardgame" collid="224517">
+    <name sortindex="1">Brass: Birmingham</name>
+    <yearpublished>2018</yearpublished>
+    <stats minplayers="2" maxplayers="4" minplaytime="60" maxplaytime="120" playingtime="120" numowned="0">
+      <rating value="9.5">
+        <average value="8.6" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>4</numplays>
+  </item>
+  <item objecttype="thing" objectid="295947" subtype="boardgame" collid="295947">
+    <name sortindex="1">Cascadia</name>
+    <yearpublished>2021</yearpublished>
+    <stats minplayers="1" maxplayers="4" minplaytime="30" maxplaytime="45" playingtime="45" numowned="0">
+      <rating value="8.0">
+        <average value="7.9" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>11</numplays>
+  </item>
+  <item objecttype="thing" objectid="133473" subtype="boardgame" collid="133473">
+    <name sortindex="1">Sushi Go!</name>
+    <yearpublished>2013</yearpublished>
+    <stats minplayers="2" maxplayers="5" minplaytime="15" maxplaytime="15" playingtime="15" numowned="0">
+      <rating value="6.5">
+        <average value="7.0" />
+      </rating>
+    </stats>
+    <status own="1" />
+    <numplays>22</numplays>
+  </item>
+</items>
