@@ -15,6 +15,7 @@ import { LoginPage } from "./components/LoginPage";
 import { CollectionsBar } from "./components/CollectionsBar";
 import { Filters } from "./components/Filters";
 import { GameCarousel } from "./components/GameCarousel";
+import { GameFan } from "./components/GameFan";
 import { useCollections, userKey } from "./hooks/useCollections";
 import { filterGames, mergeCollections, sampleRandom } from "./filterGames";
 import type { Account, CollectionResponse, FilterState, GameList, OwnedGame } from "./types";
@@ -28,7 +29,14 @@ const DEFAULT_FILTERS: FilterState = {
 };
 
 // A game list has at most this many games, chosen at random from the matches.
-const MAX_RESULTS = 8;
+const MAX_RESULTS = 7;
+
+// How the game list is shown:
+//   "fan"      — all games at once as tilted 3D cards (GameFan)
+//   "carousel" — the GSAP slideshow (GameCarousel)
+// Switch this one line to go back.
+const LIST_DISPLAY = "fan" as "fan" | "carousel";
+const ListDisplay = LIST_DISPLAY === "fan" ? GameFan : GameCarousel;
 
 // Shown when the database has no saved collections yet (e.g. the very first run).
 const DEFAULT_USERNAMES: string[] = ["matthan"];
@@ -258,8 +266,8 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
       {/* 2. title */}
       <header id="site-header" className="site-header">
         <p className="eyebrow">Boardroom Game Night</p>
-        <h1>Game Night Picker</h1>
-        <p className="muted">Combine BoardGameGeek collections, filter for tonight, and let fate decide.</p>
+        <h1>Board Game Picker</h1>
+        <p className="muted">Seven games enter. One hits the table. Cast your vote!</p>
       </header>
 
       {/* 3–4. the shared game list */}
@@ -275,8 +283,8 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
           <p id="list-meta" className="muted list-meta">
             Game list made{list.createdBy ? ` by ${list.createdBy}` : ""} · {listDate}
           </p>
-          <GameCarousel
-            games={list.games}
+          <ListDisplay
+            games={list.games.slice(0, MAX_RESULTS)} // older lists may have had 8
             showOwners={loaded.length > 1}
             onToggleHidden={isAdmin ? handleToggleHidden : undefined}
           />

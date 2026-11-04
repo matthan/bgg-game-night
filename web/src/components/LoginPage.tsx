@@ -27,7 +27,7 @@ export function LoginPage({ onLogin }: { onLogin: (account: Account) => void }) 
     <main className="app">
       <header className="site-header">
         <p className="eyebrow">Boardroom Game Night</p>
-        <h1>Game Night Picker</h1>
+        <h1>Board Game Picker</h1>
         <p className="muted">Sign in to pick tonight's game.</p>
       </header>
 
