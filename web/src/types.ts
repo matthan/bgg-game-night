@@ -46,8 +46,8 @@ export interface Account {
   lastLoginAt: string | null;
 }
 
-/** 2 yes please! · 1 sounds good · 0 take it or leave it · -1 rather not · -2 no thanks */
-export type InterestLevel = -2 | -1 | 0 | 1 | 2;
+/** 5 yes please! · 4 sounds great · 3 sure thing · 2 slightly · 1 not particularly · 0 rather not */
+export type InterestLevel = 0 | 1 | 2 | 3 | 4 | 5;
 
 /** One person's interest in a game ("no opinion" = not in the list). */
 export interface Interest {

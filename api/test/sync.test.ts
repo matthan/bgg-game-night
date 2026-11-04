@@ -165,23 +165,24 @@ test("interest: one level per user per game, clearable, kept across lists", () =
   for (const [id, name] of [[1, "matthan"], [2, "sam"], [3, "trevor"]] as const) {
     db.prepare("INSERT INTO accounts (id, username, password_hash, is_admin, created_at) VALUES (?, ?, 'x', 0, 'now')").run(id, name);
   }
-  assert.equal(repo.setInterest(db, 1, 999, 2), false); // unknown game
-  repo.setInterest(db, 1, 1, 2);
-  repo.setInterest(db, 2, 1, -1);
-  repo.setInterest(db, 2, 1, 1); // changing your mind replaces the old level
-  repo.setInterest(db, 3, 2, -2);
+  assert.equal(repo.setInterest(db, 1, 999, 5), false); // unknown game
+  repo.setInterest(db, 1, 1, 5);
+  repo.setInterest(db, 2, 1, 1);
+  repo.setInterest(db, 2, 1, 4); // changing your mind replaces the old level
+  repo.setInterest(db, 3, 2, 0);
   assert.deepEqual(repo.getInterest(db, [1]).get(1), [
-    { username: "matthan", level: 2 },
-    { username: "sam", level: 1 },
+    { username: "matthan", level: 5 },
+    { username: "sam", level: 4 },
   ]);
   repo.setInterest(db, 2, 1, null); // back to no opinion
-  assert.deepEqual(repo.getInterest(db, [1]).get(1), [{ username: "matthan", level: 2 }]);
+  assert.deepEqual(repo.getInterest(db, [1]).get(1), [{ username: "matthan", level: 5 }]);
   repo.createList(db, {}, [1, 2], 1); // a new list doesn't touch interest
   assert.equal(repo.getInterest(db, [1, 2]).size, 2);
-  assert.throws(() => db.prepare("INSERT INTO game_interest VALUES (1, 2, 5, 'now')").run()); // level out of range
+  assert.throws(() => db.prepare("INSERT INTO game_interest VALUES (1, 2, 6, 'now')").run()); // level out of range
   assert.deepEqual(repo.listMemberNames(db), ["matthan", "sam", "trevor"]);
-  assert.equal(repo.isInterestLevel(3), false);
-  assert.equal(repo.isInterestLevel(-2), true);
+  assert.equal(repo.isInterestLevel(6), false);
+  assert.equal(repo.isInterestLevel(-1), false);
+  assert.equal(repo.isInterestLevel(0), true);
 });
 
 test("interest import: saves known users/games, skips the rest, deletes the file", async () => {
@@ -191,15 +192,28 @@ test("interest import: saves known users/games, skips the rest, deletes the file
   db.prepare("INSERT INTO accounts (id, username, password_hash, is_admin, created_at) VALUES (1, 'Trevor', 'x', 0, 'now')").run();
   const file = join(mkdtempSync(join(tmpdir(), "gn-")), "import-interest.json");
   writeFileSync(file, JSON.stringify({ entries: [
-    { username: "trevor", gameId: 1, level: 2 },   // ok (usernames match case-insensitively)
-    { username: "trevor", gameId: 2, level: -2 },  // ok
+    { username: "trevor", gameId: 1, level: 5 },   // ok (usernames match case-insensitively)
+    { username: "trevor", gameId: 2, level: 0 },   // ok
     { username: "nobody", gameId: 1, level: 1 },   // unknown user
     { username: "trevor", gameId: 999, level: 1 }, // unknown game
   ] }));
   await repo.importInterest(db, file);
   assert.equal(existsSync(file), false);
-  assert.deepEqual(repo.getInterest(db, [1]).get(1), [{ username: "Trevor", level: 2 }]);
-  assert.deepEqual(repo.getInterest(db, [2]).get(2), [{ username: "Trevor", level: -2 }]);
+  assert.deepEqual(repo.getInterest(db, [1]).get(1), [{ username: "Trevor", level: 5 }]);
+  assert.deepEqual(repo.getInterest(db, [2]).get(2), [{ username: "Trevor", level: 0 }]);
+});
+
+test("migration 9 moves old interest answers onto the six-level scale", async () => {
+  const { migrations } = await import("../src/db/schema.js");
+  const db = new (await import("node:sqlite")).DatabaseSync(":memory:");
+  for (const m of migrations.filter((m) => m.version < 9)) db.exec(m.sql);
+  db.exec("INSERT INTO accounts (id, username, password_hash, is_admin, created_at) VALUES (1, 'a', 'x', 0, 'now')");
+  for (const id of [1, 2, 3, 4, 5]) db.exec(`INSERT INTO games (id, name, updated_at) VALUES (${id}, 'G${id}', 'now')`);
+  [2, 1, 0, -1, -2].forEach((level, i) =>
+    db.prepare("INSERT INTO game_interest VALUES (1, ?, ?, 'now')").run(i + 1, level));
+  db.exec(migrations.find((m) => m.version === 9)!.sql);
+  const levels = db.prepare("SELECT level FROM game_interest ORDER BY game_id").all().map((r) => Number(r.level));
+  assert.deepEqual(levels, [5, 4, 2, 0, 0]);
 });
 
 test("hidden users disappear from the list and come back when added again", () => {

@@ -171,4 +171,27 @@ export const migrations: { version: number; name: string; sql: string }[] = [
       WHERE name LIKE '%&%;%';
     `,
   },
+  {
+    version: 9,
+    name: "six interest levels",
+    sql: `
+      -- New scale, keenest first: 5 yes please!, 4 sounds great, 3 sure thing,
+      -- 2 slightly, 1 not particularly, 0 rather not (no row = no opinion).
+      -- Old answers move: yes please 2->5, sounds good 1->4,
+      -- take it or leave it 0->2, rather not -1->0, no thanks -2->0.
+      CREATE TABLE game_interest_new (
+        account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        game_id    INTEGER NOT NULL REFERENCES games(id),
+        level      INTEGER NOT NULL CHECK (level BETWEEN 0 AND 5),
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (account_id, game_id)
+      );
+      INSERT INTO game_interest_new (account_id, game_id, level, updated_at)
+        SELECT account_id, game_id, CASE level WHEN 2 THEN 5 WHEN 1 THEN 4 WHEN 0 THEN 2 ELSE 0 END, updated_at
+          FROM game_interest;
+      DROP TABLE game_interest;
+      ALTER TABLE game_interest_new RENAME TO game_interest;
+      CREATE INDEX game_interest_game ON game_interest(game_id);
+    `,
+  },
 ];

@@ -85,7 +85,12 @@ export function parseCollectionXml(xml: string): Game[] {
     throw new BggError(errors[0].message ?? "BGG returned an error", 404);
   }
 
-  const items: any[] = doc?.items?.item ?? [];
+  // We ask BGG for owned base games only (own=1, no expansions), but check
+  // again here in case it sends others anyway: anything not marked owned, or
+  // marked as an expansion, is left out.
+  const items: any[] = (doc?.items?.item ?? []).filter(
+    (item: any) => item.subtype !== "boardgameexpansion" && String(item.status?.own ?? "1") === "1",
+  );
   return items.map((item): Game => {
     const stats = item.stats ?? {};
     const rating = stats.rating ?? {};

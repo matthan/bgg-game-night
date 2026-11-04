@@ -448,9 +448,10 @@ export function updateCurrentListGames(db: DatabaseSync, gameIds: number[]): boo
 
 // ---------- interest per user per game ----------
 
-export type InterestLevel = -2 | -1 | 0 | 1 | 2;
+/** 5 yes please! · 4 sounds great · 3 sure thing · 2 slightly · 1 not particularly · 0 rather not */
+export type InterestLevel = 0 | 1 | 2 | 3 | 4 | 5;
 export const isInterestLevel = (v: unknown): v is InterestLevel =>
-  Number.isInteger(v) && (v as number) >= -2 && (v as number) <= 2;
+  Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 5;
 
 export interface Interest {
   username: string;

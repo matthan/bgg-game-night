@@ -5,7 +5,7 @@ import * as repo from "../db/repo.js";
 /**
  * Your interest in a game. Anyone signed in can set their OWN interest;
  * everyone can see everyone's (it comes with the game list).
- *   PUT    /api/interest/:gameId { level: -2..2 } -> set it
+ *   PUT    /api/interest/:gameId { level: 0..5 } -> set it
  *   DELETE /api/interest/:gameId                  -> back to "no opinion"
  * Both answer with everyone's interest in that game.
  */
@@ -15,7 +15,7 @@ export function interestRouter({ db }: { db: DatabaseSync }) {
   router.put("/:gameId", (req, res) => {
     const level = req.body?.level;
     if (!repo.isInterestLevel(level)) {
-      return res.status(400).json({ error: "level must be 2, 1, 0, -1 or -2." });
+      return res.status(400).json({ error: "level must be a whole number from 0 (rather not) to 5 (yes, please!)." });
     }
     save(Number(req.params.gameId), level, req, res);
   });

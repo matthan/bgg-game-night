@@ -80,10 +80,11 @@ game's votes go with it. Pages re-check the list every 15 seconds.
 
 ## Interest levels
 
-Everyone signed in can say how keen they are on each game: 😍 Yes, please!,
-🙂 Sounds good, 😐 Take it or leave it, 😕 Rather not, 🙅 No thanks, or no
-opinion. Select a card to set yours (click it again to clear it) and to see
-everyone's. Each card also shows everyone's emojis. Unlike votes, interest is
+Everyone signed in can say how keen they are on each game, shown as a die
+from six pips down to one: Yes, please! · Sounds great · Sure thing ·
+Slightly · Not particularly · Rather not — or no opinion. Select a card to set
+yours (click it again to clear it) and to see everyone's. Each card also shows
+everyone's dice. The labels, dice and colors live in `web/src/interest.ts`. Unlike votes, interest is
 kept permanently per person per game (`game_interest` table), so it carries
 over to future lists.
 
@@ -127,7 +128,7 @@ sample games plus a few extras in `api/mock/catalog.xml`.
 | `GET /api/lists/current` | The current shared game list (games in order, with owners) |
 | `POST /api/lists` · `PUT /api/lists/current/games` | Create a list / change its games (admin only) |
 | `PUT`/`DELETE /api/lists/current/games/:id/vote` | Vote / unvote for a game in the current list |
-| `PUT /api/interest/:gameId { level }` · `DELETE /api/interest/:gameId` | Set / clear your interest in a game (level 2 to -2) |
+| `PUT /api/interest/:gameId { level }` · `DELETE /api/interest/:gameId` | Set / clear your interest in a game (level 5 = yes, please! down to 0 = rather not) |
 | `PUT /api/games/:id/hidden` | Hide a game from the results (kept in the database; admin only) |
 | `DELETE /api/games/:id/hidden` | Show a hidden game again |
 | `GET /api/games/hidden` | List hidden games |

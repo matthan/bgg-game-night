@@ -64,7 +64,8 @@ export async function searchBgg(query: string, token: string, exact = false): Pr
 }
 
 export function parseThingInfoXml(xml: string): Map<number, ThingInfo> {
-  const items: any[] = parser.parse(xml)?.items?.item ?? [];
+  // expansions can't be added (only base games count as owning a game)
+  const items: any[] = (parser.parse(xml)?.items?.item ?? []).filter((it: any) => it.type !== "boardgameexpansion");
   const details = parseDetailsXml(xml); // weight + player-count poll, already handled there
   const out = new Map<number, ThingInfo>();
   for (const it of items) {

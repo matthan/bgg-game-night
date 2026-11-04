@@ -89,3 +89,20 @@ test("HTML codes in BGG names are decoded", async () => {
   db.exec(migrations.find((m) => m.version === 8)!.sql); // running it again is harmless
   assert.equal((db.prepare("SELECT name FROM games WHERE id = 1").get() as any).name, "It's a Wonderful World");
 });
+
+test("collection import keeps only owned base games", async () => {
+  const { parseCollectionXml } = await import("../src/bgg/client.js");
+  const item = (id: number, subtype: string, own: string) => `
+    <item objecttype="thing" objectid="${id}" subtype="${subtype}"><name sortindex="1">G${id}</name>
+      <stats minplayers="2" maxplayers="4" playingtime="60"><rating value="N/A"><average value="7"/></rating></stats>
+      <status own="${own}" prevowned="0" want="0" wishlist="0"/><numplays>0</numplays></item>`;
+  const games = parseCollectionXml(`<items>${item(1, "boardgame", "1")}${item(2, "boardgameexpansion", "1")}${item(3, "boardgame", "0")}</items>`);
+  assert.deepEqual(games.map((g) => g.id), [1]);
+});
+
+test("expansions can't be added by hand", () => {
+  const info = parseThingInfoXml(`<items>
+    <item type="boardgame" id="1"><name type="primary" value="Base"/></item>
+    <item type="boardgameexpansion" id="2"><name type="primary" value="Base: More"/></item></items>`);
+  assert.deepEqual([...info.keys()], [1]);
+});
