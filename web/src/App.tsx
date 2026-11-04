@@ -8,6 +8,7 @@ import {
   logout,
   setGameHidden,
   setUnauthorizedHandler,
+  setVote,
   updateListGames,
 } from "./api";
 import { AccountsPanel } from "./components/AccountsPanel";
@@ -18,7 +19,7 @@ import { GameCarousel } from "./components/GameCarousel";
 import { GameFan } from "./components/GameFan";
 import { useCollections, userKey } from "./hooks/useCollections";
 import { filterGames, mergeCollections, sampleRandom } from "./filterGames";
-import type { Account, CollectionResponse, FilterState, GameList, OwnedGame } from "./types";
+import type { Account, CollectionResponse, FilterState, GameList, ListGame, OwnedGame } from "./types";
 
 const DEFAULT_FILTERS: FilterState = {
   players: null,
@@ -37,6 +38,9 @@ const MAX_RESULTS = 7;
 // Switch this one line to go back.
 const LIST_DISPLAY = "fan" as "fan" | "carousel";
 const ListDisplay = LIST_DISPLAY === "fan" ? GameFan : GameCarousel;
+
+// How often the page re-checks the game list (new lists, other people's votes).
+const LIST_REFRESH_MS = 15_000;
 
 // Shown when the database has no saved collections yet (e.g. the very first run).
 const DEFAULT_USERNAMES: string[] = ["matthan"];
@@ -92,8 +96,9 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
       .catch(() => setUsernames(DEFAULT_USERNAMES));
   }, []);
 
-  // Load the current game list, and again whenever this tab comes back into
-  // view, so everyone picks up a new list without reloading.
+  // Load the current game list; then check again every 15 seconds while the
+  // page is visible (and when the tab comes back), so everyone sees new
+  // lists and each other's votes without reloading.
   useEffect(() => {
     const load = () =>
       getCurrentList()
@@ -102,7 +107,11 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
     load();
     const onVisible = () => document.visibilityState === "visible" && load();
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    const timer = setInterval(() => document.visibilityState === "visible" && load(), LIST_REFRESH_MS);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(timer);
+    };
   }, []);
 
   // Show the list's filters. Non-admins always see the saved ones; the admin's
@@ -216,6 +225,26 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
     }
   }
 
+  // Vote / unvote. Show it straight away, then save; if saving fails, reload the list.
+  async function handleToggleVote(game: ListGame) {
+    if (!list) return;
+    const voted = !game.votes.includes(account.username);
+    setList({
+      ...list,
+      games: list.games.map((g) =>
+        g.id !== game.id
+          ? g
+          : { ...g, votes: voted ? [...g.votes, account.username] : g.votes.filter((v) => v !== account.username) },
+      ),
+    });
+    try {
+      setList(await setVote(game.id, voted));
+    } catch (err) {
+      setListError(`Couldn't save your vote: ${err instanceof Error ? err.message : "unknown error"}`);
+      getCurrentList().then(setList).catch(() => {});
+    }
+  }
+
   // Undo a hide: show the game again and put it back where it was.
   async function handleUndoHide() {
     if (!list || !justHidden) return;
@@ -287,6 +316,8 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
             games={list.games.slice(0, MAX_RESULTS)} // older lists may have had 8
             showOwners={loaded.length > 1}
             onToggleHidden={isAdmin ? handleToggleHidden : undefined}
+            me={account.username}
+            onToggleVote={handleToggleVote}
           />
           {justHidden && (
             <p id="hide-message" className="status" role="status">

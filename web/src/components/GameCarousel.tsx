@@ -11,6 +11,8 @@ interface Props {
   highlightId?: number;
   showOwners?: boolean;
   onToggleHidden?: (game: OwnedGame) => void; // Hide / Unhide button
+  me?: string; // voting isn't shown in the slideshow (see GameFan)
+  onToggleVote?: (game: never) => void;
 }
 
 /**

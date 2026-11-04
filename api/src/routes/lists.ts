@@ -10,6 +10,8 @@ const MAX_GAMES = 50;
  *   GET  /api/lists/current          -> the current list (or null)     [anyone signed in]
  *   POST /api/lists { filters, gameIds } -> make a new current list    [admin]
  *   PUT  /api/lists/current/games { gameIds } -> change its games      [admin]
+ *   PUT  /api/lists/current/games/:id/vote    -> vote for a game        [anyone signed in]
+ *   DELETE /api/lists/current/games/:id/vote  -> take your vote back    [anyone signed in]
  */
 export function listsRouter({ db }: { db: DatabaseSync }) {
   const router = Router();
@@ -17,13 +19,14 @@ export function listsRouter({ db }: { db: DatabaseSync }) {
   function sendCurrent(res: Response) {
     const list = repo.getCurrentList(db);
     if (!list) return res.json(null);
+    const votes = repo.getListVotes(db, list.id);
     res.json({
       id: list.id,
       filters: list.filters,
       createdBy: list.createdBy,
       createdAt: list.createdAt,
       updatedAt: list.updatedAt,
-      games: repo.getGamesByIds(db, list.gameIds),
+      games: repo.getGamesByIds(db, list.gameIds).map((g) => ({ ...g, votes: votes.get(g.id) ?? [] })),
     });
   }
 
@@ -64,6 +67,19 @@ export function listsRouter({ db }: { db: DatabaseSync }) {
     if (!repo.updateCurrentListGames(db, ids)) return res.status(404).json({ error: "There's no game list yet." });
     sendCurrent(res);
   });
+
+  // Votes: one per account per game; anyone signed in can vote for any number of games.
+  router.put("/current/games/:id/vote", (req, res) => vote(req, res, true));
+  router.delete("/current/games/:id/vote", (req, res) => vote(req, res, false));
+
+  function vote(req: Request, res: Response, voted: boolean) {
+    const gameId = Number(req.params.id);
+    if (!Number.isInteger(gameId)) return res.status(400).json({ error: "Invalid game id." });
+    if (!repo.setVote(db, req.account!.id, gameId, voted)) {
+      return res.status(404).json({ error: "That game isn't in the current game list." });
+    }
+    sendCurrent(res);
+  }
 
   return router;
 }

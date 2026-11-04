@@ -73,6 +73,11 @@ When the admin **hides** a game, it leaves the results everywhere and its spot
 in the list is filled with another random game that fits the list's filters
 (Undo puts it back).
 
+**Voting:** everyone signed in can vote 👍 for any games in the current list
+(one vote per game). Each card shows the vote count and a colored badge per
+voter. Votes belong to the list: creating a new list erases them, and a hidden
+game's votes go with it. Pages re-check the list every 15 seconds.
+
 ## How syncing works
 
 | When | What happens |
@@ -94,6 +99,7 @@ in the list is filled with another random game that fits the list's filters
 | `DELETE /api/users/:username` | Hide a collection from the page |
 | `GET /api/lists/current` | The current shared game list (games in order, with owners) |
 | `POST /api/lists` · `PUT /api/lists/current/games` | Create a list / change its games (admin only) |
+| `PUT`/`DELETE /api/lists/current/games/:id/vote` | Vote / unvote for a game in the current list |
 | `PUT /api/games/:id/hidden` | Hide a game from the results (kept in the database; admin only) |
 | `DELETE /api/games/:id/hidden` | Show a hidden game again |
 | `GET /api/games/hidden` | List hidden games |
@@ -110,6 +116,7 @@ in the list is filled with another random game that fits the list's filters
 | `game_player_counts` | BGG community poll votes per game and player count |
 | `collection_items` | Who owns what: rating, plays, added/removed dates |
 | `game_lists` | Shared game lists: filters used, game ids in order, who made it (newest = current) |
+| `list_votes` | Votes on the current list (cleared when a new list is made) |
 | `accounts` / `sessions` | Sign-in accounts (hashed passwords) and signed-in browsers |
 | `game_notes` | Your own per-game data: `hidden_at` (Hide button), plus notes/tags (not used by the UI yet) |
 

@@ -119,4 +119,19 @@ export const migrations: { version: number; name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    version: 5,
+    name: "votes on the current game list",
+    sql: `
+      -- One row per account per game they voted for, in a given list.
+      -- Only the current list's votes matter; making a new list clears them.
+      CREATE TABLE list_votes (
+        list_id    INTEGER NOT NULL REFERENCES game_lists(id) ON DELETE CASCADE,
+        game_id    INTEGER NOT NULL,
+        account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        voted_at   TEXT NOT NULL,
+        PRIMARY KEY (list_id, game_id, account_id)
+      );
+    `,
+  },
 ];

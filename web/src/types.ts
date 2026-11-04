@@ -44,11 +44,16 @@ export interface Account {
   lastLoginAt: string | null;
 }
 
+/** A game in the shared list, with who voted for it. */
+export interface ListGame extends OwnedGame {
+  votes: string[]; // usernames, in the order they voted
+}
+
 /** The shared game list (made by an admin from a set of filters). */
 export interface GameList {
   id: number;
   filters: FilterState;
-  games: OwnedGame[]; // in display order
+  games: ListGame[]; // in display order
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;

@@ -1,12 +1,23 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import type { OwnedGame } from "../types";
+import type { ListGame, OwnedGame } from "../types";
 import { formatCounts } from "../filterGames";
 import "./GameFan.css";
 
 interface Props {
-  games: OwnedGame[];
+  games: (OwnedGame & { votes?: string[] })[];
   showOwners?: boolean;
   onToggleHidden?: (game: OwnedGame) => void; // Hide / Unhide button (admin only)
+  me?: string; // signed-in username, to show whether *you* voted
+  onToggleVote?: (game: ListGame) => void; // 👍 button on each card
+}
+
+const MAX_VOTER_BADGES = 6;
+
+/** A stable color per username, so each person's vote badge is recognisable. */
+function voterColor(name: string) {
+  let h = 0;
+  for (const ch of name.toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return `hsl(${h}, 65%, 45%)`;
 }
 
 const bggUrl = (id: number) => `https://boardgamegeek.com/boardgame/${id}`;
@@ -35,7 +46,7 @@ function formatTime(g: OwnedGame) {
  * The selection is stored by POSITION, so when a game is hidden and another
  * fills its spot, the new game is selected in its place.
  */
-export function GameFan({ games, showOwners = false, onToggleHidden }: Props) {
+export function GameFan({ games, showOwners = false, onToggleHidden, me, onToggleVote }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   const rootRef = useRef<HTMLElement>(null);
 
@@ -77,35 +88,65 @@ export function GameFan({ games, showOwners = false, onToggleHidden }: Props) {
   return (
     <section id="carousel" className="fan" aria-label="Game list" ref={rootRef}>
       <div className={`fan-cards${index !== null ? " has-selection" : ""}`} onKeyDown={handleKeyDown}>
-        {games.map((g, i) => (
-          <button
-            key={g.id}
-            type="button"
-            className={`fan-card${i === index ? " selected" : ""}${g.hidden ? " is-hidden" : ""}`}
-            onClick={() => handleCardClick(i)}
-            aria-pressed={i === index}
-            aria-label={i === index ? `${g.name}: open on BoardGameGeek (new tab)` : `Select ${g.name}`}
-          >
-            <span className="fan-cover">
-              {g.image || g.thumbnail ? (
-                <img src={g.image ?? g.thumbnail ?? ""} alt="" draggable={false} />
-              ) : (
-                <span className="fan-placeholder" aria-hidden>
-                  🎲
+        {games.map((g, i) => {
+          const votes = g.votes ?? [];
+          const iVoted = !!me && votes.includes(me);
+          return (
+            <div key={g.id} className={`fan-card${i === index ? " selected" : ""}${g.hidden ? " is-hidden" : ""}`}>
+              <button
+                type="button"
+                className="fan-select"
+                onClick={() => handleCardClick(i)}
+                aria-pressed={i === index}
+                aria-label={i === index ? `${g.name}: open on BoardGameGeek (new tab)` : `Select ${g.name}`}
+              >
+                <span className="fan-cover">
+                  {/* who voted: one colored badge per person */}
+                  {votes.length > 0 && (
+                    <span className="fan-voters" aria-hidden>
+                      {votes.slice(0, MAX_VOTER_BADGES).map((v) => (
+                        <span key={v} className="voter-badge" style={{ background: voterColor(v) }} title={v}>
+                          {v[0].toUpperCase()}
+                        </span>
+                      ))}
+                      {votes.length > MAX_VOTER_BADGES && (
+                        <span className="voter-badge more">+{votes.length - MAX_VOTER_BADGES}</span>
+                      )}
+                    </span>
+                  )}
+                  {g.image || g.thumbnail ? (
+                    <img src={g.image ?? g.thumbnail ?? ""} alt="" draggable={false} />
+                  ) : (
+                    <span className="fan-placeholder" aria-hidden>
+                      🎲
+                    </span>
+                  )}
+                  {/* same details the slideshow cards showed */}
+                  <span className="fan-caption">
+                    <span className="fan-name">{g.name}</span>
+                    <span className="fan-stats">
+                      👥 {formatPlayers(g)} · ⏱ {formatTime(g)}
+                      {g.weight ? ` · ⚖ ${g.weight.toFixed(1)}` : ""}
+                      {g.bggRating ? ` · ⭐ ${g.bggRating.toFixed(1)}` : ""}
+                    </span>
+                  </span>
                 </span>
+              </button>
+              {onToggleVote && g.votes && (
+                <button
+                  type="button"
+                  className={`vote-button${iVoted ? " voted" : ""}`}
+                  onClick={() => onToggleVote(g as ListGame)}
+                  aria-pressed={iVoted}
+                  aria-label={`${iVoted ? "Remove your vote for" : "Vote for"} ${g.name} (${votes.length} vote${votes.length === 1 ? "" : "s"})`}
+                  title={votes.length ? `Votes: ${votes.join(", ")}` : "Vote for this game"}
+                >
+                  👍{votes.length > 0 && <span className="vote-count">{votes.length}</span>}
+                </button>
               )}
-              {/* same details the slideshow cards showed */}
-              <span className="fan-caption">
-                <span className="fan-name">{g.name}</span>
-                <span className="fan-stats">
-                  👥 {formatPlayers(g)} · ⏱ {formatTime(g)}
-                  {g.weight ? ` · ⚖ ${g.weight.toFixed(1)}` : ""}
-                  {g.bggRating ? ` · ⭐ ${g.bggRating.toFixed(1)}` : ""}
-                </span>
-              </span>
-            </span>
-          </button>
-        ))}
+            </div>
+          );
+        })}
       </div>
 
       {/* Title line for the selected game (screen readers hear changes). */}
@@ -119,6 +160,9 @@ export function GameFan({ games, showOwners = false, onToggleHidden }: Props) {
             <span className="muted">
               {active.bestWith.length ? ` · Best with ${formatCounts(active.bestWith)}` : ""}
             </span>
+            {active.votes && active.votes.length > 0 && (
+              <span className="muted"> · Votes: {active.votes.join(", ")}</span>
+            )}
             {onToggleHidden && (
               <button
                 type="button"

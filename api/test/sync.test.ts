@@ -129,6 +129,32 @@ test("game lists: newest is current, games come back in order with owners", () =
   assert.deepEqual([...repo.existingGameIds(db, [1, 99])], [1]);
 });
 
+test("votes: per account, cleared by a new list, removed with a swapped-out game", () => {
+  const db = openDatabase(":memory:");
+  repo.ensureUser(db, "alice");
+  repo.saveCollection(db, "alice", [game(1, "A"), game(2, "B"), game(3, "C")]);
+  for (const [id, name] of [[1, "matthan"], [2, "sam"]] as const) {
+    db.prepare("INSERT INTO accounts (id, username, password_hash, is_admin, created_at) VALUES (?, ?, 'x', 0, 'now')").run(id, name);
+  }
+  assert.equal(repo.setVote(db, 1, 1, true), false); // no list yet
+  repo.createList(db, {}, [1, 2], 1);
+  const listId = () => repo.getCurrentList(db)!.id;
+  assert.equal(repo.setVote(db, 1, 3, true), false); // game 3 isn't in the list
+  repo.setVote(db, 1, 1, true);
+  repo.setVote(db, 2, 1, true);
+  repo.setVote(db, 2, 1, true); // voting twice counts once
+  repo.setVote(db, 2, 2, true);
+  assert.deepEqual(repo.getListVotes(db, listId()).get(1), ["matthan", "sam"]);
+  repo.setVote(db, 1, 1, false); // unvote
+  assert.deepEqual(repo.getListVotes(db, listId()).get(1), ["sam"]);
+  repo.updateCurrentListGames(db, [1, 3]); // game 2 swapped out -> its votes go
+  assert.equal(repo.getListVotes(db, listId()).get(2), undefined);
+  assert.deepEqual(repo.getListVotes(db, listId()).get(1), ["sam"]);
+  repo.createList(db, {}, [1, 2], 1); // new list -> no votes at all
+  assert.equal(repo.getListVotes(db, listId()).size, 0);
+  assert.equal(Number((db.prepare("SELECT COUNT(*) n FROM list_votes").get() as any).n), 0);
+});
+
 test("hidden users disappear from the list and come back when added again", () => {
   const db = openDatabase(":memory:");
   repo.ensureUser(db, "alice");

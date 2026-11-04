@@ -25,16 +25,21 @@
 
 /* A card: a narrow slot with the (wider) cover overflowing to the right. */
 .fan-card {
-  all: unset; /* it's a <button> for keyboard access; drop the button look */
-  cursor: pointer;
   position: relative;
   flex: 0 0 auto;
   width: var(--slot);
   height: var(--cover-h);
-  perspective: 600px;
   transition: width 0.3s, scale 0.3s, filter 0.3s;
 }
-.fan-card:focus-visible .fan-cover { outline: 3px solid var(--accent); outline-offset: 3px; }
+/* the cover is a <button> (select / open); drop the button look */
+.fan-select {
+  all: unset;
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  perspective: 600px;
+}
+.fan-select:focus-visible .fan-cover { outline: 3px solid var(--accent); outline-offset: 3px; }
 
 .fan-cover {
   position: absolute;
@@ -109,6 +114,55 @@
 
 .fan-card.is-hidden img { filter: grayscale(1) brightness(0.6); }
 
+/* ---------- votes ---------- */
+/* 👍 button: top-right of the part of the card you can see */
+.vote-button {
+  position: absolute;
+  top: 10px;
+  right: 8px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 99px;
+  font-size: 14px;
+  line-height: 1.2;
+  background: rgba(10, 5, 15, 0.72);
+  color: var(--text);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: right 0.3s, background 0.2s, transform 0.15s;
+}
+.vote-button:hover { transform: scale(1.08); }
+.vote-button.voted { background: var(--accent); color: var(--accent-text); }
+.vote-count { font-size: 12px; font-weight: 700; }
+/* when the card faces forward, move the button to the cover's real top-right corner */
+.fan-card.selected .vote-button { right: calc(var(--slot-open) - var(--cover-w) + 10px); }
+
+/* voter badges: a column of colored initials on the cover's top-left */
+.fan-voters {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 1;
+}
+.voter-badge {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+.voter-badge.more { background: rgba(10, 5, 15, 0.8); font-size: 10px; }
+
 .fan-info { margin-top: 4px; min-height: 1.6em; }
 
 /* smaller screens: smaller cards; on phones the row scrolls sideways */
@@ -127,5 +181,5 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .fan-card, .fan-cover { transition: none; }
+  .fan-card, .fan-cover, .vote-button { transition: none; }
 }

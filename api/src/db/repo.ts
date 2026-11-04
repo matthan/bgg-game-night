@@ -315,20 +315,65 @@ export function getCurrentList(db: DatabaseSync): GameListRow | null {
 
 export function createList(db: DatabaseSync, filters: unknown, gameIds: number[], accountId: number) {
   const ts = now();
-  db.prepare(
-    "INSERT INTO game_lists (filters, game_ids, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-  ).run(JSON.stringify(filters), JSON.stringify(gameIds), accountId, ts, ts);
+  transaction(db, () => {
+    const { lastInsertRowid } = db
+      .prepare("INSERT INTO game_lists (filters, game_ids, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
+      .run(JSON.stringify(filters), JSON.stringify(gameIds), accountId, ts, ts);
+    // A new list starts with no votes: erase the votes from earlier lists.
+    db.prepare("DELETE FROM list_votes WHERE list_id <> ?").run(lastInsertRowid);
+  });
 }
 
 /** Change which games are in the current list (e.g. swap out a hidden one). */
 export function updateCurrentListGames(db: DatabaseSync, gameIds: number[]): boolean {
   const current = getCurrentList(db);
   if (!current) return false;
-  db.prepare("UPDATE game_lists SET game_ids = ?, updated_at = ? WHERE id = ?").run(
-    JSON.stringify(gameIds),
-    now(),
-    current.id,
-  );
+  transaction(db, () => {
+    db.prepare("UPDATE game_lists SET game_ids = ?, updated_at = ? WHERE id = ?").run(
+      JSON.stringify(gameIds),
+      now(),
+      current.id,
+    );
+    // Votes for games that left the list (e.g. hidden ones) go with them.
+    db.prepare(
+      "DELETE FROM list_votes WHERE list_id = ? AND game_id NOT IN (SELECT value FROM json_each(?))",
+    ).run(current.id, JSON.stringify(gameIds));
+  });
+  return true;
+}
+
+// ---------- votes on the current list ----------
+
+/** Who voted for each game in a list: { gameId -> [usernames, in voting order] }. */
+export function getListVotes(db: DatabaseSync, listId: number): Map<number, string[]> {
+  const votes = new Map<number, string[]>();
+  for (const r of db
+    .prepare(
+      `SELECT v.game_id, a.username FROM list_votes v JOIN accounts a ON a.id = v.account_id
+        WHERE v.list_id = ? ORDER BY v.voted_at, a.username`,
+    )
+    .all(listId) as any[]) {
+    votes.set(Number(r.game_id), [...(votes.get(Number(r.game_id)) ?? []), r.username]);
+  }
+  return votes;
+}
+
+/** Vote (or take the vote back) for a game in the current list. False if it isn't in the list. */
+export function setVote(db: DatabaseSync, accountId: number, gameId: number, voted: boolean): boolean {
+  const current = getCurrentList(db);
+  if (!current || !current.gameIds.includes(gameId)) return false;
+  if (voted) {
+    db.prepare(
+      `INSERT INTO list_votes (list_id, game_id, account_id, voted_at) VALUES (?, ?, ?, ?)
+       ON CONFLICT DO NOTHING`,
+    ).run(current.id, gameId, accountId, now());
+  } else {
+    db.prepare("DELETE FROM list_votes WHERE list_id = ? AND game_id = ? AND account_id = ?").run(
+      current.id,
+      gameId,
+      accountId,
+    );
+  }
   return true;
 }
 

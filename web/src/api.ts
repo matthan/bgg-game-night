@@ -49,6 +49,10 @@ export const createList = (filters: FilterState, gameIds: number[]) =>
 export const updateListGames = (gameIds: number[]) =>
   request<GameList>("/api/lists/current/games", json("PUT", { gameIds }));
 
+/** Vote for a game in the current list (or take the vote back). */
+export const setVote = (gameId: number, voted: boolean) =>
+  request<GameList>(`/api/lists/current/games/${gameId}/vote`, { method: voted ? "PUT" : "DELETE" });
+
 // ---------- collections & games ----------
 
 const path = (username: string) => `/api/collection/${encodeURIComponent(username)}`;
