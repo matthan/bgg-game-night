@@ -32,6 +32,8 @@ export interface CollectionResponse {
   lastSyncedAt: string | null; // when this collection was last refreshed from BGG
   lastSyncError: string | null; // problem from the last refresh, if any
   syncing: boolean; // the API is refreshing it in the background right now
+  kind: "bgg" | "manual"; // synced from a BGG account, or games added by hand only
+  manualGameIds: number[]; // games added by hand (these can be removed)
   games: Game[];
 }
 
@@ -44,9 +46,19 @@ export interface Account {
   lastLoginAt: string | null;
 }
 
-/** A game in the shared list, with who voted for it. */
+/** 2 yes please! · 1 sounds good · 0 take it or leave it · -1 rather not · -2 no thanks */
+export type InterestLevel = -2 | -1 | 0 | 1 | 2;
+
+/** One person's interest in a game ("no opinion" = not in the list). */
+export interface Interest {
+  username: string;
+  level: InterestLevel;
+}
+
+/** A game in the shared list, with who voted for it and everyone's interest. */
 export interface ListGame extends OwnedGame {
   votes: string[]; // usernames, in the order they voted
+  interest: Interest[]; // keenest first
 }
 
 /** The shared game list (made by an admin from a set of filters). */
@@ -54,6 +66,7 @@ export interface GameList {
   id: number;
   filters: FilterState;
   games: ListGame[]; // in display order
+  members: string[]; // everyone who can sign in (to show "no opinion")
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -62,10 +75,28 @@ export interface GameList {
 /** A collection saved in the API's database (GET /api/users). */
 export interface SavedUser {
   username: string;
+  source: "bgg" | "manual";
   addedAt: string;
   lastSyncedAt: string | null;
   lastSyncError: string | null;
   gameCount: number;
+}
+
+/** A BGG search result (GET /api/catalog/search). */
+export interface SearchHit {
+  id: number;
+  name: string;
+  yearPublished: number | null;
+  inDatabase: boolean;
+}
+
+/** What happened when adding games by hand. */
+export interface AddGamesResult {
+  added: number[];
+  already: number[];
+  notFound: (string | number)[]; // names (bulk) or ids
+  matched: { query: string; id: number; name: string; yearPublished: number | null }[]; // bulk only
+  collection: CollectionResponse;
 }
 
 export interface FilterState {

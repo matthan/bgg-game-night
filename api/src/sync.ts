@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { fetchCollection } from "./bgg/client.js";
+import { BggError, fetchCollection } from "./bgg/client.js";
 import { fetchDetails } from "./bgg/details.js";
 import { fetchMockCollection, fetchMockDetails } from "./bgg/mock.js";
 import * as repo from "./db/repo.js";
@@ -29,6 +29,9 @@ export function createSyncService(opts: SyncOptions) {
   const running = new Map<string, Promise<SyncResult>>();
 
   async function run(username: string): Promise<SyncResult> {
+    if (repo.getUser(db, username)?.source === "manual") {
+      throw new BggError(`${username}'s games are added by hand, so there's nothing to sync from BGG.`, 400);
+    }
     const neverSynced = !repo.getUser(db, username)?.last_synced_at;
     repo.ensureUser(db, username);
 
@@ -79,7 +82,7 @@ export function createSyncService(opts: SyncOptions) {
 
   /** Sync every user shown on the page, one at a time (used by the nightly job). */
   async function syncAll() {
-    for (const u of repo.listUsers(db)) {
+    for (const u of repo.listUsers(db).filter((u) => u.source === "bgg")) {
       try {
         await syncCollection(u.username);
       } catch (err) {

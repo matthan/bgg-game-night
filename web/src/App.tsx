@@ -7,11 +7,13 @@ import {
   listUsers,
   logout,
   setGameHidden,
+  setInterest,
   setUnauthorizedHandler,
   setVote,
   updateListGames,
 } from "./api";
 import { AccountsPanel } from "./components/AccountsPanel";
+import { AddGamesPanel } from "./components/AddGamesPanel";
 import { LoginPage } from "./components/LoginPage";
 import { CollectionsBar } from "./components/CollectionsBar";
 import { Filters } from "./components/Filters";
@@ -19,7 +21,7 @@ import { GameCarousel } from "./components/GameCarousel";
 import { GameFan } from "./components/GameFan";
 import { useCollections, userKey } from "./hooks/useCollections";
 import { filterGames, mergeCollections, sampleRandom } from "./filterGames";
-import type { Account, CollectionResponse, FilterState, GameList, ListGame, OwnedGame } from "./types";
+import type { Account, CollectionResponse, FilterState, GameList, InterestLevel, ListGame, OwnedGame } from "./types";
 
 const DEFAULT_FILTERS: FilterState = {
   players: null,
@@ -76,6 +78,8 @@ const sameFilters = (a: FilterState, b: FilterState) =>
 function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () => void }) {
   const isAdmin = account.isAdmin; // only admins (matthan) can make lists, hide games, manage users
   const [showAccounts, setShowAccounts] = useState(false);
+  const [showAddGames, setShowAddGames] = useState(false);
+  const canAddGames = userKey(account.username) !== "guest"; // the shared guest sign-in has no games
 
   // --- State: the minimum data the UI needs to remember ---
   // null until the saved collections have been loaded from the API
@@ -122,7 +126,7 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
   }, [list, isAdmin]);
 
   // --- Data fetching (custom hook) ---
-  const { entries, refresh, markGameHidden } = useCollections(usernames);
+  const { entries, refresh, markGameHidden, setCollection } = useCollections(usernames);
   const [showHidden, setShowHidden] = useState(false); // admin: allow hidden games in new lists
   // for "Undo": the hidden game, where it was, and the game that replaced it
   const [justHidden, setJustHidden] = useState<{ game: OwnedGame; index: number; replacementId: number | null } | null>(null);
@@ -161,6 +165,14 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
   function handleRemove(name: string) {
     setUsernames((prev) => (prev ?? []).filter((u) => userKey(u) !== userKey(name)));
     hideUser(name).catch(() => {}); // hidden in the database; its data is kept
+  }
+
+  // Games were added/removed by hand: show the new collection (and its chip, if it's new).
+  function handleCollectionChanged(data: CollectionResponse) {
+    setCollection(data);
+    setUsernames((prev) =>
+      (prev ?? []).some((u) => userKey(u) === userKey(data.username)) ? prev : [...(prev ?? []), data.username],
+    );
   }
 
   function handleFiltersChange(next: FilterState) {
@@ -245,6 +257,29 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
     }
   }
 
+  // Set your interest in a game (null = no opinion). Show it straight away, then save.
+  async function handleSetInterest(game: ListGame, level: InterestLevel | null) {
+    if (!list) return;
+    const me = account.username;
+    const withMine = (g: ListGame): ListGame => ({
+      ...g,
+      interest: [
+        ...g.interest.filter((i) => i.username !== me),
+        ...(level === null ? [] : [{ username: me, level }]),
+      ].sort((a, b) => b.level - a.level || a.username.localeCompare(b.username)),
+    });
+    setList({ ...list, games: list.games.map((g) => (g.id === game.id ? withMine(g) : g)) });
+    try {
+      const interest = await setInterest(game.id, level);
+      setList((current) =>
+        current ? { ...current, games: current.games.map((g) => (g.id === game.id ? { ...g, interest } : g)) } : current,
+      );
+    } catch (err) {
+      setListError(`Couldn't save your interest: ${err instanceof Error ? err.message : "unknown error"}`);
+      getCurrentList().then(setList).catch(() => {});
+    }
+  }
+
   // Undo a hide: show the game again and put it back where it was.
   async function handleUndoHide() {
     if (!list || !justHidden) return;
@@ -280,6 +315,11 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
         <span className="muted">
           Signed in as <strong>{account.username}</strong>
         </span>
+        {canAddGames && (
+          <button type="button" className="text-button" onClick={() => setShowAddGames((s) => !s)}>
+            Add games
+          </button>
+        )}
         {isAdmin && (
           <button type="button" className="text-button" onClick={() => setShowAccounts((s) => !s)}>
             Manage users
@@ -291,6 +331,14 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
       </nav>
 
       {isAdmin && showAccounts && <AccountsPanel me={account} onClose={() => setShowAccounts(false)} />}
+      {canAddGames && showAddGames && (
+        <AddGamesPanel
+          me={account}
+          collections={Object.fromEntries(Object.entries(entries).map(([k, e]) => [k, e.data]))}
+          onChanged={handleCollectionChanged}
+          onClose={() => setShowAddGames(false)}
+        />
+      )}
 
       {/* 2. title */}
       <header id="site-header" className="site-header">
@@ -318,6 +366,8 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
             onToggleHidden={isAdmin ? handleToggleHidden : undefined}
             me={account.username}
             onToggleVote={handleToggleVote}
+            members={list.members}
+            onSetInterest={handleSetInterest}
           />
           {justHidden && (
             <p id="hide-message" className="status" role="status">

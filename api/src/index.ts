@@ -2,10 +2,14 @@ import express from "express";
 import { dirname, join } from "node:path";
 import { importInitialAccounts, requireAdmin, requireLogin } from "./auth.js";
 import { openDatabase } from "./db/index.js";
+import { importInterest } from "./db/repo.js";
+import { createCatalog } from "./catalog.js";
 import { accountsRouter } from "./routes/accounts.js";
+import { catalogRouter } from "./routes/catalog.js";
 import { authRouter } from "./routes/auth.js";
 import { collectionRouter } from "./routes/collection.js";
 import { gamesRouter } from "./routes/games.js";
+import { interestRouter } from "./routes/interest.js";
 import { listsRouter } from "./routes/lists.js";
 import { usersRouter } from "./routes/users.js";
 import { createSyncService, scheduleNightlySync } from "./sync.js";
@@ -25,7 +29,10 @@ const SECURE_COOKIES = process.env.SECURE_COOKIES === "true";
 const db = openDatabase(DB_PATH);
 // First run: create login accounts from data/initial-accounts.json (then that file is deleted).
 await importInitialAccounts(db, join(dirname(DB_PATH), "initial-accounts.json"));
+// One-time import of interest levels from data/import-interest.json (then that file is deleted).
+await importInterest(db, join(dirname(DB_PATH), "import-interest.json"));
 const sync = createSyncService({ db, token: BGG_TOKEN, useMock: USE_MOCK, detailsMaxAgeDays: DETAILS_MAX_AGE_DAYS });
+const catalog = createCatalog({ db, token: BGG_TOKEN, useMock: USE_MOCK });
 
 const app = express();
 app.set("trust proxy", 1); // requests arrive through Vite (dev) or nginx (prod)
@@ -39,9 +46,11 @@ app.use("/api/auth", authRouter({ db, secureCookies: SECURE_COOKIES }));
 
 // --- everything below needs a signed-in account ---
 app.use("/api", requireLogin(db));
-app.use("/api/collection", collectionRouter({ db, sync, useMock: USE_MOCK, refreshMinutes: REFRESH_MINUTES }));
+app.use("/api/collection", collectionRouter({ db, sync, catalog, useMock: USE_MOCK, refreshMinutes: REFRESH_MINUTES }));
 app.use("/api/users", usersRouter({ db }));
 app.use("/api/lists", listsRouter({ db })); // reading is open; changing it is admin-only (inside)
+app.use("/api/interest", interestRouter({ db })); // your own interest in a game
+app.use("/api/catalog", catalogRouter({ catalog })); // search BGG for games to add by hand
 
 // --- admin only (matthan): hiding games, managing accounts ---
 app.use("/api/games", requireAdmin, gamesRouter({ db }));

@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import type { ListGame, OwnedGame } from "../types";
+import type { InterestLevel, ListGame, OwnedGame } from "../types";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { interestInfo, showInInterest } from "../interest";
+import { InterestPanel } from "./InterestPanel";
 import { formatCounts } from "../filterGames";
 import "./GameFan.css";
 
 interface Props {
-  games: (OwnedGame & { votes?: string[] })[];
+  games: (OwnedGame & Partial<Pick<ListGame, "votes" | "interest">>)[];
   showOwners?: boolean;
   onToggleHidden?: (game: OwnedGame) => void; // Hide / Unhide button (admin only)
   me?: string; // signed-in username, to show whether *you* voted
   onToggleVote?: (game: ListGame) => void; // 👍 button on each card
+  members?: string[]; // everyone who can sign in (for "no opinion")
+  onSetInterest?: (game: ListGame, level: InterestLevel | null) => void;
 }
 
 const MAX_VOTER_BADGES = 6;
@@ -46,7 +51,7 @@ function formatTime(g: OwnedGame) {
  * The selection is stored by POSITION, so when a game is hidden and another
  * fills its spot, the new game is selected in its place.
  */
-export function GameFan({ games, showOwners = false, onToggleHidden, me, onToggleVote }: Props) {
+export function GameFan({ games, showOwners = false, onToggleHidden, me, onToggleVote, members = [], onSetInterest }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   const rootRef = useRef<HTMLElement>(null);
 
@@ -123,6 +128,19 @@ export function GameFan({ games, showOwners = false, onToggleHidden, me, onToggl
                   )}
                   {/* same details the slideshow cards showed */}
                   <span className="fan-caption">
+                    {/* everyone's interest at a glance, keenest first */}
+                    {(g.interest?.filter((it) => showInInterest(it.username)).length ?? 0) > 0 && (
+                      <span className="fan-interest" aria-hidden>
+                        {g.interest!.filter((it) => showInInterest(it.username)).map((it) => (
+                          <FontAwesomeIcon
+                            key={it.username}
+                            icon={interestInfo(it.level).icon}
+                            style={{ color: interestInfo(it.level).color }}
+                            title={`${it.username}: ${interestInfo(it.level).label}`}
+                          />
+                        ))}
+                      </span>
+                    )}
                     <span className="fan-name">{g.name}</span>
                     <span className="fan-stats">
                       👥 {formatPlayers(g)} · ⏱ {formatTime(g)}
@@ -175,6 +193,9 @@ export function GameFan({ games, showOwners = false, onToggleHidden, me, onToggl
               </button>
             )}
             {showOwners && <p className="owners">Owned by {active.owners.join(", ")}</p>}
+            {onSetInterest && me && active.interest && (
+              <InterestPanel game={active as ListGame} members={members} me={me} onSetInterest={onSetInterest} />
+            )}
           </>
         ) : null}
       </div>

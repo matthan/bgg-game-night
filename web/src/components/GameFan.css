@@ -114,6 +114,17 @@
 
 .fan-card.is-hidden img { filter: grayscale(1) brightness(0.6); }
 
+/* everyone's interest dice, just above the game name */
+.fan-interest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: 6px;
+  font-size: 16px;
+  line-height: 1;
+}
+.fan-interest svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6)); } /* pips show the dark cover through */
+
 /* ---------- votes ---------- */
 /* 👍 button: top-right of the part of the card you can see */
 .vote-button {

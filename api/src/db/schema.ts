@@ -134,4 +134,41 @@ export const migrations: { version: number; name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    version: 6,
+    name: "interest per user per game",
+    sql: `
+      -- How keen each person is on each game. No row = "no opinion".
+      -- level: 2 yes please!, 1 sounds good, 0 take it or leave it, -1 rather not, -2 no thanks
+      CREATE TABLE game_interest (
+        account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        game_id    INTEGER NOT NULL REFERENCES games(id),
+        level      INTEGER NOT NULL CHECK (level BETWEEN -2 AND 2),
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (account_id, game_id)
+      );
+      CREATE INDEX game_interest_game ON game_interest(game_id);
+    `,
+  },
+  {
+    version: 7,
+    name: "collections with games added by hand",
+    sql: `
+      -- 'bgg' = synced from a BGG account; 'manual' = no BGG account, games added by hand
+      ALTER TABLE users ADD COLUMN source TEXT NOT NULL DEFAULT 'bgg';
+      -- 1 = added by hand (a BGG sync never removes it)
+      ALTER TABLE collection_items ADD COLUMN manual INTEGER NOT NULL DEFAULT 0;
+    `,
+  },
+  {
+    version: 8,
+    name: "decode HTML codes in game names",
+    sql: `
+      -- BGG sends some names double-encoded ("Tzolk&#039;in"); new syncs decode
+      -- them (decodeName in bgg/client.ts). This fixes names already saved.
+      UPDATE games SET name =
+        replace(replace(replace(replace(name, '&#039;', ''''), '&quot;', '"'), '&#10;', ' '), '&amp;', '&')
+      WHERE name LIKE '%&%;%';
+    `,
+  },
 ];

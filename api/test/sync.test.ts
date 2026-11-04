@@ -4,6 +4,9 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { openDatabase } from "../src/db/index.js";
 import * as repo from "../src/db/repo.js";
 import { createSyncService } from "../src/sync.js";
@@ -153,6 +156,50 @@ test("votes: per account, cleared by a new list, removed with a swapped-out game
   repo.createList(db, {}, [1, 2], 1); // new list -> no votes at all
   assert.equal(repo.getListVotes(db, listId()).size, 0);
   assert.equal(Number((db.prepare("SELECT COUNT(*) n FROM list_votes").get() as any).n), 0);
+});
+
+test("interest: one level per user per game, clearable, kept across lists", () => {
+  const db = openDatabase(":memory:");
+  repo.ensureUser(db, "alice");
+  repo.saveCollection(db, "alice", [game(1, "A"), game(2, "B")]);
+  for (const [id, name] of [[1, "matthan"], [2, "sam"], [3, "trevor"]] as const) {
+    db.prepare("INSERT INTO accounts (id, username, password_hash, is_admin, created_at) VALUES (?, ?, 'x', 0, 'now')").run(id, name);
+  }
+  assert.equal(repo.setInterest(db, 1, 999, 2), false); // unknown game
+  repo.setInterest(db, 1, 1, 2);
+  repo.setInterest(db, 2, 1, -1);
+  repo.setInterest(db, 2, 1, 1); // changing your mind replaces the old level
+  repo.setInterest(db, 3, 2, -2);
+  assert.deepEqual(repo.getInterest(db, [1]).get(1), [
+    { username: "matthan", level: 2 },
+    { username: "sam", level: 1 },
+  ]);
+  repo.setInterest(db, 2, 1, null); // back to no opinion
+  assert.deepEqual(repo.getInterest(db, [1]).get(1), [{ username: "matthan", level: 2 }]);
+  repo.createList(db, {}, [1, 2], 1); // a new list doesn't touch interest
+  assert.equal(repo.getInterest(db, [1, 2]).size, 2);
+  assert.throws(() => db.prepare("INSERT INTO game_interest VALUES (1, 2, 5, 'now')").run()); // level out of range
+  assert.deepEqual(repo.listMemberNames(db), ["matthan", "sam", "trevor"]);
+  assert.equal(repo.isInterestLevel(3), false);
+  assert.equal(repo.isInterestLevel(-2), true);
+});
+
+test("interest import: saves known users/games, skips the rest, deletes the file", async () => {
+  const db = openDatabase(":memory:");
+  repo.ensureUser(db, "alice");
+  repo.saveCollection(db, "alice", [game(1, "A"), game(2, "B")]);
+  db.prepare("INSERT INTO accounts (id, username, password_hash, is_admin, created_at) VALUES (1, 'Trevor', 'x', 0, 'now')").run();
+  const file = join(mkdtempSync(join(tmpdir(), "gn-")), "import-interest.json");
+  writeFileSync(file, JSON.stringify({ entries: [
+    { username: "trevor", gameId: 1, level: 2 },   // ok (usernames match case-insensitively)
+    { username: "trevor", gameId: 2, level: -2 },  // ok
+    { username: "nobody", gameId: 1, level: 1 },   // unknown user
+    { username: "trevor", gameId: 999, level: 1 }, // unknown game
+  ] }));
+  await repo.importInterest(db, file);
+  assert.equal(existsSync(file), false);
+  assert.deepEqual(repo.getInterest(db, [1]).get(1), [{ username: "Trevor", level: 2 }]);
+  assert.deepEqual(repo.getInterest(db, [2]).get(2), [{ username: "Trevor", level: -2 }]);
 });
 
 test("hidden users disappear from the list and come back when added again", () => {

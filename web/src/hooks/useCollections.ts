@@ -120,5 +120,10 @@ export function useCollections(usernames: string[]) {
     );
   }, []);
 
-  return { entries, refresh, markGameHidden };
+  /** Show a collection the API just sent back (e.g. after adding games by hand). */
+  const setCollection = useCallback((data: CollectionResponse) => {
+    setEntry(userKey(data.username), () => ({ status: "success", data }));
+  }, []);
+
+  return { entries, refresh, markGameHidden, setCollection };
 }

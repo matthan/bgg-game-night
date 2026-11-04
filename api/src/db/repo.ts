@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { transaction } from "./index.js";
+import type { ThingInfo } from "../bgg/catalog.js";
 import { classifyPlayerVotes, type GameDetails, type PlayerVotes } from "../bgg/details.js";
 import type { Game } from "../types.js";
 
@@ -16,6 +17,7 @@ export interface UserRow {
   added_at: string;
   last_synced_at: string | null;
   last_sync_error: string | null;
+  source: "bgg" | "manual";
 }
 
 export const userKey = (username: string) => username.trim().toLowerCase();
@@ -40,7 +42,7 @@ export function getUser(db: DatabaseSync, username: string): UserRow | undefined
 export function listUsers(db: DatabaseSync) {
   return db
     .prepare(
-      `SELECT u.username, u.added_at, u.last_synced_at, u.last_sync_error,
+      `SELECT u.username, u.source, u.added_at, u.last_synced_at, u.last_sync_error,
               (SELECT COUNT(*) FROM collection_items c
                 WHERE c.username_key = u.username_key AND c.removed_at IS NULL) AS game_count
          FROM users u WHERE u.visible = 1 ORDER BY u.added_at`,
@@ -48,6 +50,7 @@ export function listUsers(db: DatabaseSync) {
     .all()
     .map((r: any) => ({
       username: r.username as string,
+      source: r.source as "bgg" | "manual",
       addedAt: r.added_at as string,
       lastSyncedAt: r.last_synced_at as string | null,
       lastSyncError: r.last_sync_error as string | null,
@@ -115,7 +118,7 @@ export function saveCollection(db: DatabaseSync, username: string, games: Game[]
        VALUES (?, ?, ?, ?, ?, ?)
        ON CONFLICT (username_key, game_id) DO UPDATE SET
          my_rating = excluded.my_rating, num_plays = excluded.num_plays,
-         removed_at = NULL, updated_at = excluded.updated_at`,
+         removed_at = NULL, manual = 0, updated_at = excluded.updated_at`,
     );
 
     const seen = new Set<number>();
@@ -130,7 +133,7 @@ export function saveCollection(db: DatabaseSync, username: string, games: Game[]
     const removed = db
       .prepare(
         `UPDATE collection_items SET removed_at = ?, updated_at = ?
-          WHERE username_key = ? AND removed_at IS NULL
+          WHERE username_key = ? AND removed_at IS NULL AND manual = 0
             AND game_id NOT IN (SELECT value FROM json_each(?))`,
       )
       .run(ts, ts, key, JSON.stringify([...seen]));
@@ -141,6 +144,107 @@ export function saveCollection(db: DatabaseSync, username: string, games: Game[]
       removed: Number(removed.changes),
     };
   });
+}
+
+// ---------- games added by hand ----------
+
+/** A collection for someone without a BGG account (or show it again). An existing BGG one is kept as is. */
+export function ensureManualUser(db: DatabaseSync, username: string): UserRow {
+  db.prepare(
+    `INSERT INTO users (username_key, username, visible, added_at, source) VALUES (?, ?, 1, ?, 'manual')
+     ON CONFLICT (username_key) DO UPDATE SET visible = 1`,
+  ).run(userKey(username), username.trim(), now());
+  return getUser(db, username)!;
+}
+
+/** Store full game info fetched from BGG's /thing (name, players, time, rating, weight, poll). */
+export function saveThings(db: DatabaseSync, things: Iterable<ThingInfo>) {
+  const ts = now();
+  const list = [...things];
+  transaction(db, () => {
+    const upsert = db.prepare(
+      `INSERT INTO games (id, name, year_published, thumbnail, image, min_players, max_players,
+                          playing_time, min_play_time, max_play_time, bgg_rating, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (id) DO UPDATE SET
+         name = excluded.name, year_published = excluded.year_published,
+         thumbnail = excluded.thumbnail, image = excluded.image,
+         min_players = excluded.min_players, max_players = excluded.max_players,
+         playing_time = excluded.playing_time, min_play_time = excluded.min_play_time,
+         max_play_time = excluded.max_play_time, bgg_rating = excluded.bgg_rating,
+         updated_at = excluded.updated_at`,
+    );
+    for (const { game: g } of list) {
+      upsert.run(g.id, g.name, g.yearPublished, g.thumbnail, g.image, g.minPlayers, g.maxPlayers,
+        g.playingTime, g.minPlayTime, g.maxPlayTime, g.bggRating, ts);
+    }
+  });
+  saveDetails(db, new Map(list.map((t) => [t.game.id, t.details])));
+}
+
+/**
+ * Add games (already in the `games` table) to a collection by hand.
+ * Returns which were added and which the collection already had.
+ */
+export function addManualGames(db: DatabaseSync, username: string, ids: number[]) {
+  const key = userKey(username);
+  const ts = now();
+  return transaction(db, () => {
+    const owned = new Set(
+      db
+        .prepare("SELECT game_id FROM collection_items WHERE username_key = ? AND removed_at IS NULL")
+        .all(key)
+        .map((r) => Number(r.game_id)),
+    );
+    const known = existingGameIds(db, ids);
+    const insert = db.prepare(
+      `INSERT INTO collection_items (username_key, game_id, num_plays, added_at, updated_at, manual)
+       VALUES (?, ?, 0, ?, ?, 1)
+       ON CONFLICT (username_key, game_id) DO UPDATE SET removed_at = NULL, manual = 1, updated_at = excluded.updated_at`,
+    );
+    const added: number[] = [];
+    const already: number[] = [];
+    for (const id of new Set(ids)) {
+      if (!known.has(id)) continue;
+      if (owned.has(id)) already.push(id);
+      else {
+        insert.run(key, id, ts, ts);
+        added.push(id);
+      }
+    }
+    return { added, already };
+  });
+}
+
+/** Take a hand-added game out of a collection. Games that came from BGG can't be removed here. */
+export function removeManualGame(db: DatabaseSync, username: string, gameId: number): boolean {
+  const ts = now();
+  return (
+    Number(
+      db
+        .prepare(
+          `UPDATE collection_items SET removed_at = ?, updated_at = ?
+            WHERE username_key = ? AND game_id = ? AND manual = 1 AND removed_at IS NULL`,
+        )
+        .run(ts, ts, userKey(username), gameId).changes,
+    ) > 0
+  );
+}
+
+/** Ids of the games in a collection that were added by hand. */
+export function manualGameIds(db: DatabaseSync, username: string): number[] {
+  return db
+    .prepare("SELECT game_id FROM collection_items WHERE username_key = ? AND manual = 1 AND removed_at IS NULL")
+    .all(userKey(username))
+    .map((r) => Number(r.game_id));
+}
+
+/** Games already in the database with exactly this name (any case). */
+export function findGamesByName(db: DatabaseSync, name: string): { id: number; name: string; yearPublished: number | null }[] {
+  return db
+    .prepare("SELECT id, name, year_published FROM games WHERE name = ? COLLATE NOCASE")
+    .all(name.trim())
+    .map((r: any) => ({ id: Number(r.id), name: r.name, yearPublished: r.year_published ?? null }));
 }
 
 /** Which of these games have no details yet, or details older than `maxAgeDays`. */
@@ -341,6 +445,84 @@ export function updateCurrentListGames(db: DatabaseSync, gameIds: number[]): boo
   });
   return true;
 }
+
+// ---------- interest per user per game ----------
+
+export type InterestLevel = -2 | -1 | 0 | 1 | 2;
+export const isInterestLevel = (v: unknown): v is InterestLevel =>
+  Number.isInteger(v) && (v as number) >= -2 && (v as number) <= 2;
+
+export interface Interest {
+  username: string;
+  level: InterestLevel;
+}
+
+/** Everyone's interest in these games: { gameId -> [{ username, level }] }. No row = no opinion. */
+export function getInterest(db: DatabaseSync, gameIds: number[]): Map<number, Interest[]> {
+  const out = new Map<number, Interest[]>();
+  for (const r of db
+    .prepare(
+      `SELECT i.game_id, a.username, i.level FROM game_interest i JOIN accounts a ON a.id = i.account_id
+        WHERE i.game_id IN (SELECT value FROM json_each(?))
+        ORDER BY i.level DESC, a.username COLLATE NOCASE`,
+    )
+    .all(JSON.stringify(gameIds)) as any[]) {
+    const id = Number(r.game_id);
+    out.set(id, [...(out.get(id) ?? []), { username: r.username, level: Number(r.level) as InterestLevel }]);
+  }
+  return out;
+}
+
+/** Set your interest in a game (null = back to "no opinion"). False if the game doesn't exist. */
+export function setInterest(db: DatabaseSync, accountId: number, gameId: number, level: InterestLevel | null): boolean {
+  if (!db.prepare("SELECT 1 FROM games WHERE id = ?").get(gameId)) return false;
+  if (level === null) {
+    db.prepare("DELETE FROM game_interest WHERE account_id = ? AND game_id = ?").run(accountId, gameId);
+  } else {
+    db.prepare(
+      `INSERT INTO game_interest (account_id, game_id, level, updated_at) VALUES (?, ?, ?, ?)
+       ON CONFLICT (account_id, game_id) DO UPDATE SET level = excluded.level, updated_at = excluded.updated_at`,
+    ).run(accountId, gameId, level, now());
+  }
+  return true;
+}
+
+/**
+ * One-time import of interest levels (e.g. from an old poll). If the file
+ * exists, each { username, gameId, level } is saved, then the file is DELETED.
+ * Unknown usernames or games are skipped and reported. Existing levels are
+ * overwritten. Format: { "entries": [{ "username": "sam", "gameId": 13, "level": 2 }] }
+ */
+export async function importInterest(db: DatabaseSync, file: string) {
+  const { existsSync, readFileSync, unlinkSync } = await import("node:fs");
+  if (!existsSync(file)) return;
+  const { entries } = JSON.parse(readFileSync(file, "utf8")) as {
+    entries: { username: string; gameId: number; level: InterestLevel }[];
+  };
+  const accountId = new Map(
+    db.prepare("SELECT id, username FROM accounts").all().map((r: any) => [String(r.username).toLowerCase(), Number(r.id)]),
+  );
+  let saved = 0;
+  const skipped: string[] = [];
+  transaction(db, () => {
+    for (const e of entries) {
+      const id = accountId.get(e.username.toLowerCase());
+      if (id === undefined || !isInterestLevel(e.level) || !setInterest(db, id, e.gameId, e.level)) {
+        skipped.push(`${e.username}/${e.gameId}`);
+      } else saved++;
+    }
+  });
+  unlinkSync(file);
+  console.log(`[interest] imported ${saved} interest levels from ${file} (then deleted it)`);
+  if (skipped.length) console.log(`[interest] skipped ${skipped.length} (unknown user or game): ${skipped.join(", ")}`);
+}
+
+/** Every account's username (so the page can show who has "no opinion"). */
+export const listMemberNames = (db: DatabaseSync): string[] =>
+  db
+    .prepare("SELECT username FROM accounts ORDER BY username COLLATE NOCASE")
+    .all()
+    .map((r: any) => r.username as string);
 
 // ---------- votes on the current list ----------
 

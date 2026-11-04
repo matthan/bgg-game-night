@@ -28,5 +28,7 @@ export interface CollectionResponse {
   lastSyncedAt: string | null; // when this collection was last refreshed from BGG
   lastSyncError: string | null; // problem from the last refresh, if any
   syncing: boolean; // a refresh is running right now (data may update shortly)
+  kind: "bgg" | "manual"; // synced from a BGG account, or games added by hand only
+  manualGameIds: number[]; // games added by hand (these can be removed on the page)
   games: Game[];
 }

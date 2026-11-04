@@ -1,0 +1,58 @@
+/* Interest picker + everyone's interest, shown under the selected game. */
+.interest-panel {
+  margin: 14px auto 0;
+  max-width: 820px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.interest-choices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+.interest-heading { font-size: 13px; color: var(--muted); margin-right: 4px; }
+.interest-choice {
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--field);
+  color: var(--text);
+  border: 2px solid transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+.interest-choice:hover { border-color: var(--level-color); }
+.interest-choice.chosen {
+  background: var(--level-color);
+  border-color: var(--level-color);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* the die icons: drawn in the level's color (white on the chosen button) */
+.interest-die { color: var(--level-color); font-size: 1.15em; vertical-align: -0.15em; }
+.interest-choice.chosen .interest-die { color: #fff; }
+
+.interest-everyone {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 10px;
+  font-size: 13px;
+}
+.interest-everyone li {
+  padding: 3px 10px 3px 8px;
+  border-radius: 6px;
+  border-left: 4px solid var(--level-color);
+  background: var(--surface);
+}
+.interest-everyone li.no-opinion { border-left-color: var(--border); color: var(--muted); }
+.interest-everyone strong { font-weight: 600; }

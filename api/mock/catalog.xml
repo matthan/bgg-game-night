@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SAMPLE DATA for mock mode: games that are NOT in the mock collection, for testing "Add games".
+     Shaped like BGG /xmlapi2/thing?stats=1; values are approximate. -->
+<items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+  <item type="boardgame" id="162886">
+    <name type="primary" sortindex="1" value="Spirit Island" />
+    <yearpublished value="2017" />
+    <minplayers value="1" />
+    <maxplayers value="4" />
+    <playingtime value="120" />
+    <minplaytime value="90" />
+    <maxplaytime value="120" />
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="1">
+        <result value="Best" numvotes="10" />
+        <result value="Recommended" numvotes="50" />
+        <result value="Not Recommended" numvotes="40" />
+      </results>
+      <results numplayers="2">
+        <result value="Best" numvotes="70" />
+        <result value="Recommended" numvotes="25" />
+        <result value="Not Recommended" numvotes="5" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="35" />
+        <result value="Recommended" numvotes="55" />
+        <result value="Not Recommended" numvotes="10" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="50" />
+        <result value="Not Recommended" numvotes="30" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <usersrated value="60000" />
+        <average value="8.3" />
+        <numweights value="100" />
+        <averageweight value="4.08" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="359871">
+    <name type="primary" sortindex="1" value="Arcs" />
+    <yearpublished value="2024" />
+    <minplayers value="2" />
+    <maxplayers value="4" />
+    <playingtime value="120" />
+    <minplaytime value="60" />
+    <maxplaytime value="120" />
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="2">
+        <result value="Best" numvotes="20" />
+        <result value="Recommended" numvotes="50" />
+        <result value="Not Recommended" numvotes="30" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="35" />
+        <result value="Not Recommended" numvotes="5" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="55" />
+        <result value="Recommended" numvotes="40" />
+        <result value="Not Recommended" numvotes="5" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <usersrated value="9000" />
+        <average value="8.1" />
+        <numweights value="100" />
+        <averageweight value="3.45" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="43015">
+    <name type="primary" sortindex="1" value="Hansa Teutonica" />
+    <yearpublished value="2009" />
+    <minplayers value="2" />
+    <maxplayers value="5" />
+    <playingtime value="90" />
+    <minplaytime value="45" />
+    <maxplaytime value="90" />
+    <poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="100">
+      <results numplayers="2">
+        <result value="Best" numvotes="5" />
+        <result value="Recommended" numvotes="35" />
+        <result value="Not Recommended" numvotes="60" />
+      </results>
+      <results numplayers="3">
+        <result value="Best" numvotes="45" />
+        <result value="Recommended" numvotes="50" />
+        <result value="Not Recommended" numvotes="5" />
+      </results>
+      <results numplayers="4">
+        <result value="Best" numvotes="60" />
+        <result value="Recommended" numvotes="35" />
+        <result value="Not Recommended" numvotes="5" />
+      </results>
+      <results numplayers="5">
+        <result value="Best" numvotes="25" />
+        <result value="Recommended" numvotes="50" />
+        <result value="Not Recommended" numvotes="25" />
+      </results>
+    </poll>
+    <statistics page="1">
+      <ratings>
+        <usersrated value="16000" />
+        <average value="7.8" />
+        <numweights value="100" />
+        <averageweight value="3.0" />
+      </ratings>
+    </statistics>
+  </item>
+  <item type="boardgame" id="12345">
+    <name type="primary" sortindex="1" value="Spirit Island" />
+    <yearpublished value="1999" />
+    <minplayers value="2" />
+    <maxplayers value="4" />
+    <playingtime value="30" />
+    <minplaytime value="30" />
+    <maxplaytime value="30" />
+    <statistics page="1">
+      <ratings>
+        <usersrated value="40" />
+        <average value="5.1" />
+        <numweights value="100" />
+        <averageweight value="1.5" />
+      </ratings>
+    </statistics>
+  </item>
+</items>

@@ -18,6 +18,23 @@ const parser = new XMLParser({
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * BGG double-encodes some characters in names ("Tzolk&#039;in"), so they're
+ * still HTML codes after XML parsing. This turns them back into characters.
+ */
+export function decodeName(name: string): string {
+  const named: Record<string, string> = { amp: "&", quot: '"', apos: "'", lt: "<", gt: ">", nbsp: " " };
+  let out = name;
+  for (let i = 0; i < 2 && out.includes("&"); i++) {
+    out = out.replace(/&(#x[0-9a-f]+|#\d+|amp|quot|apos|lt|gt|nbsp);/gi, (m, code: string) => {
+      if (code[0] !== "#") return named[code.toLowerCase()] ?? m;
+      const n = code[1].toLowerCase() === "x" ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+      return Number.isFinite(n) ? String.fromCodePoint(n) : m;
+    });
+  }
+  return out;
+}
+
 /** Turn "7.5", "N/A", undefined, etc. into a number or null. */
 function num(value: unknown): number | null {
   const n = Number(value);
@@ -76,7 +93,7 @@ export function parseCollectionXml(xml: string): Game[] {
 
     return {
       id: Number(item.objectid),
-      name: String(name ?? "Unknown"),
+      name: decodeName(String(name ?? "Unknown")),
       yearPublished: num(item.yearpublished),
       thumbnail: item.thumbnail ?? null,
       image: item.image ?? null,

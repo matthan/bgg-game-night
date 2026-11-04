@@ -20,13 +20,19 @@ export function listsRouter({ db }: { db: DatabaseSync }) {
     const list = repo.getCurrentList(db);
     if (!list) return res.json(null);
     const votes = repo.getListVotes(db, list.id);
+    const interest = repo.getInterest(db, list.gameIds);
     res.json({
       id: list.id,
       filters: list.filters,
       createdBy: list.createdBy,
       createdAt: list.createdAt,
       updatedAt: list.updatedAt,
-      games: repo.getGamesByIds(db, list.gameIds).map((g) => ({ ...g, votes: votes.get(g.id) ?? [] })),
+      members: repo.listMemberNames(db), // everyone who can sign in (for "no opinion")
+      games: repo.getGamesByIds(db, list.gameIds).map((g) => ({
+        ...g,
+        votes: votes.get(g.id) ?? [],
+        interest: interest.get(g.id) ?? [],
+      })),
     });
   }
 

@@ -40,7 +40,10 @@ export function CollectionsBar({ usernames, entries, onAdd, onRemove, onRefresh 
         {usernames.map((name) => {
           const entry = entries[userKey(name)];
           const busy = entry?.status === "loading" || entry?.refreshing || entry?.data?.syncing;
-          const title = entry?.error ?? (entry?.data ? `Last synced with BGG ${timeAgo(entry.data.lastSyncedAt)}` : undefined);
+          const manual = entry?.data?.kind === "manual";
+          const title =
+            entry?.error ??
+            (manual ? "Games added by hand" : entry?.data ? `Last synced with BGG ${timeAgo(entry.data.lastSyncedAt)}` : undefined);
           return (
             <li key={userKey(name)} className={`chip ${entry?.status ?? "loading"}`} title={title}>
               <span>
@@ -49,7 +52,7 @@ export function CollectionsBar({ usernames, entries, onAdd, onRemove, onRefresh 
                 {entry?.status === "success" && ` (${entry.data!.games.length})`}
                 {entry?.status === "error" && " ⚠️"}
               </span>
-              {entry?.status !== "loading" && (
+              {entry?.status !== "loading" && !manual && (
                 <button
                   type="button"
                   className={`chip-refresh${busy ? " spinning" : ""}`}

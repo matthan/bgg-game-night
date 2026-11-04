@@ -61,15 +61,15 @@ h1, h2, h3, legend {
 /* page-level notes (e.g. "15 unique games across 1 collection"): centered, space below */
 .app > .muted { text-align: center; margin-bottom: 28px; }
 
-input, select, button { font: inherit; }
-input, select {
+input, select, button, textarea { font: inherit; }
+input, select, textarea {
   padding: 10px 12px;
   border: 0;
   border-radius: 8px;
   background: var(--field);
   color: var(--text);
 }
-input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 select option { background: var(--surface); }
 button {
   padding: 8px 14px;
@@ -356,3 +356,21 @@ button.secondary {
 .filters:disabled select { opacity: 1; cursor: default; } /* readable when locked */
 .carousel-actions { display: flex; justify-content: center; gap: 12px; margin-top: 12px; }
 .carousel-actions button { border-radius: 99px; padding: 10px 22px; font-weight: 600; }
+/* ---------- add games by hand ---------- */
+.add-games > .muted { margin: 6px 0 14px; }
+.add-games-target { display: block; margin-bottom: 12px; }
+.add-games-target select { margin-left: 6px; }
+.add-games-search { display: flex; gap: 8px; }
+.add-games-search input { flex: 1; }
+.search-hits { list-style: none; margin: 10px 0 0; padding: 0; font-size: 14px; max-height: 320px; overflow-y: auto; }
+.search-hits li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 4px; border-top: 1px solid var(--border); }
+.search-hits a { color: var(--text); }
+.add-games-bulk { margin-top: 18px; }
+.add-games-bulk summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.add-games-bulk form { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.add-games-bulk textarea { resize: vertical; }
+.add-games-bulk button { align-self: flex-start; }
+.bulk-summary p { margin: 6px 0; font-size: 14px; }
+.error-text { color: var(--error); }
+.add-games-subhead { margin: 20px 0 8px; font-size: 20px; }
+.manual-games { justify-content: flex-start; }

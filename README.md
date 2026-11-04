@@ -78,6 +78,30 @@ in the list is filled with another random game that fits the list's filters
 voter. Votes belong to the list: creating a new list erases them, and a hidden
 game's votes go with it. Pages re-check the list every 15 seconds.
 
+## Interest levels
+
+Everyone signed in can say how keen they are on each game: 😍 Yes, please!,
+🙂 Sounds good, 😐 Take it or leave it, 😕 Rather not, 🙅 No thanks, or no
+opinion. Select a card to set yours (click it again to clear it) and to see
+everyone's. Each card also shows everyone's emojis. Unlike votes, interest is
+kept permanently per person per game (`game_interest` table), so it carries
+over to future lists.
+
+## Adding games by hand
+
+Not everyone has a BGG account. **Add games** (top right) lets each member add
+games to their own collection — named after their sign-in — and the admin add
+to anyone's. Search BoardGameGeek and click **+ Add**, or paste a list (one
+name per line) under **Add a list of games**. Each name is matched exactly; if
+several games share a name, the most-rated one is used, and names not found
+stay in the box to fix. Game info (players, time, weight, poll) still comes
+from BGG; only "who owns it" is manual.
+
+A collection with only hand-added games is never synced from BGG (its chip has
+no ↻). Games added by hand to a BGG collection survive its syncs. Only
+hand-added games can be removed in the panel. In mock mode, search uses the
+sample games plus a few extras in `api/mock/catalog.xml`.
+
 ## How syncing works
 
 | When | What happens |
@@ -97,9 +121,13 @@ game's votes go with it. Pages re-check the list every 15 seconds.
 | `POST /api/collection/:username/sync` | Re-sync from BGG now |
 | `GET /api/users` | Saved collections (the page shows these on load) |
 | `DELETE /api/users/:username` | Hide a collection from the page |
+| `GET /api/catalog/search?q=` | Search BGG board games by name |
+| `POST /api/collection/:username/games { ids }` or `{ names }` | Add games by hand (your own collection; admin: anyone's) |
+| `DELETE /api/collection/:username/games/:id` | Remove a hand-added game |
 | `GET /api/lists/current` | The current shared game list (games in order, with owners) |
 | `POST /api/lists` · `PUT /api/lists/current/games` | Create a list / change its games (admin only) |
 | `PUT`/`DELETE /api/lists/current/games/:id/vote` | Vote / unvote for a game in the current list |
+| `PUT /api/interest/:gameId { level }` · `DELETE /api/interest/:gameId` | Set / clear your interest in a game (level 2 to -2) |
 | `PUT /api/games/:id/hidden` | Hide a game from the results (kept in the database; admin only) |
 | `DELETE /api/games/:id/hidden` | Show a hidden game again |
 | `GET /api/games/hidden` | List hidden games |
@@ -111,12 +139,13 @@ game's votes go with it. Pages re-check the list every 15 seconds.
 
 | Table | Holds |
 |---|---|
-| `users` | Saved usernames, visibility, last sync time/error |
+| `users` | Saved collections, visibility, last sync time/error, `source` (`bgg` or `manual`) |
 | `games` | One row per game (shared by all collections): info, rating, weight |
 | `game_player_counts` | BGG community poll votes per game and player count |
-| `collection_items` | Who owns what: rating, plays, added/removed dates |
+| `collection_items` | Who owns what: rating, plays, added/removed dates, `manual` (added by hand) |
 | `game_lists` | Shared game lists: filters used, game ids in order, who made it (newest = current) |
 | `list_votes` | Votes on the current list (cleared when a new list is made) |
+| `game_interest` | Each person's interest level per game (kept permanently; no row = no opinion) |
 | `accounts` / `sessions` | Sign-in accounts (hashed passwords) and signed-in browsers |
 | `game_notes` | Your own per-game data: `hidden_at` (Hide button), plus notes/tags (not used by the UI yet) |
 
@@ -143,17 +172,19 @@ api/
   src/auth.ts               passwords, sessions, cookies, sign-in checks
   src/sync.ts               keeps the database in step with BGG
   src/db/                   database: open + migrate, schema, all SQL (repo.ts)
-  src/routes/               /api/collection and /api/users
+  src/catalog.ts            adding games by hand (search, add by id or name)
+  src/routes/               one file per /api/... area
   src/bgg/client.ts         BGG collection fetch (202 retries, XML → JSON)
   src/bgg/details.ts        BGG /thing details: weight + player-count poll
+  src/bgg/catalog.ts        BGG /search and full /thing info for single games
   src/bgg/mock.ts           sample data for mock mode (mock/*.xml)
-  test/sync.test.ts         tests
+  test/*.test.ts            tests
 web/
   src/App.tsx               page layout and state
   src/hooks/useCollections.ts  loading, background refresh, manual refresh
   src/api.ts                calls our API
   src/filterGames.ts        filters, weight groups, merging collections
-  src/components/           LoginPage, AccountsPanel, CollectionsBar, Filters, GameCarousel, UsernameForm
+  src/components/           LoginPage, AccountsPanel, AddGamesPanel, CollectionsBar, Filters, GameCarousel, UsernameForm
   nginx.conf                production web server (ZimaOS)
 docker-compose.yml          local development
 docker-compose.prod.yml     ZimaOS / production

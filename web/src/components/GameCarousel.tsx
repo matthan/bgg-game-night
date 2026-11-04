@@ -13,6 +13,8 @@ interface Props {
   onToggleHidden?: (game: OwnedGame) => void; // Hide / Unhide button
   me?: string; // voting isn't shown in the slideshow (see GameFan)
   onToggleVote?: (game: never) => void;
+  members?: string[]; // interest isn't shown in the slideshow either
+  onSetInterest?: (game: never, level: never) => void;
 }
 
 /**

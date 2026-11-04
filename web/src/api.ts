@@ -1,4 +1,14 @@
-import type { Account, CollectionResponse, FilterState, GameList, SavedUser } from "./types";
+import type {
+  Account,
+  AddGamesResult,
+  CollectionResponse,
+  FilterState,
+  GameList,
+  Interest,
+  InterestLevel,
+  SavedUser,
+  SearchHit,
+} from "./types";
 
 // Called when the API says we're not signed in (e.g. the session expired).
 let onUnauthorized: () => void = () => {};
@@ -53,6 +63,12 @@ export const updateListGames = (gameIds: number[]) =>
 export const setVote = (gameId: number, voted: boolean) =>
   request<GameList>(`/api/lists/current/games/${gameId}/vote`, { method: voted ? "PUT" : "DELETE" });
 
+/** Set your interest in a game (null = back to "no opinion"). Returns everyone's interest in it. */
+export const setInterest = (gameId: number, level: InterestLevel | null) =>
+  level === null
+    ? request<Interest[]>(`/api/interest/${gameId}`, { method: "DELETE" })
+    : request<Interest[]>(`/api/interest/${gameId}`, json("PUT", { level }));
+
 // ---------- collections & games ----------
 
 const path = (username: string) => `/api/collection/${encodeURIComponent(username)}`;
@@ -64,6 +80,20 @@ export const getCollection = (username: string, signal?: AbortSignal) =>
 /** Re-sync a collection from BGG now. */
 export const syncCollection = (username: string) =>
   request<CollectionResponse>(`${path(username)}/sync`, { method: "POST" });
+
+// ---------- adding games by hand ----------
+
+/** Search BoardGameGeek by name. */
+export const searchGames = (q: string) =>
+  request<{ total: number; hits: SearchHit[] }>(`/api/catalog/search?q=${encodeURIComponent(q)}`);
+
+/** Add games to a collection by BGG id, or by name (creates the collection if needed). */
+export const addGames = (username: string, games: { ids: number[] } | { names: string[] }) =>
+  request<AddGamesResult>(`${path(username)}/games`, json("POST", games));
+
+/** Remove a game that was added by hand. */
+export const removeGame = (username: string, gameId: number) =>
+  request<CollectionResponse>(`${path(username)}/games/${gameId}`, { method: "DELETE" });
 
 /** Collections saved in the database (shown on page load). */
 export const listUsers = () => request<SavedUser[]>("/api/users");
