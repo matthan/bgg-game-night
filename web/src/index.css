@@ -38,7 +38,7 @@ body::before {
 * { box-sizing: border-box; }
 body { margin: 0; }
 
-.app { max-width: 1060px; margin: 0 auto; padding: 24px 16px 64px; }
+.app { max-width: 1200px; margin: 0 auto; padding: 24px 16px 64px; }
 h1, h2, h3, legend {
   font-family: var(--font-heading);
   font-weight: 400; /* Bebas Neue has a single weight */
@@ -348,7 +348,6 @@ button.secondary {
   margin: 20px 0 4px;
 }
 .create-list-button { font-size: 17px; font-weight: 600; padding: 12px 22px; border-radius: 99px; }
-.list-meta { margin-top: 28px; }
 /* new order: list first, then filters, button, collections, summary */
 #filters { margin-top: 40px; }
 #list-actions { margin-bottom: 24px; }
@@ -374,3 +373,6 @@ button.secondary {
 .error-text { color: var(--error); }
 .add-games-subhead { margin: 20px 0 8px; font-size: 20px; }
 .manual-games { justify-content: flex-start; }
+
+/* dice drawn by <Die> (white pips): sized like a Font Awesome icon */
+.die { display: inline-block; height: 1em; width: auto; overflow: visible; vertical-align: -0.125em; }

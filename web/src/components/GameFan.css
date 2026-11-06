@@ -6,8 +6,12 @@
  * Sizes are CSS variables so the fan can shrink on smaller screens.
  */
 .fan {
-  --slot: 118px;        /* space each card takes in the row (the cover overlaps the next one) */
-  --slot-open: 176px;   /* hovered / selected card's space */
+  /* one smooth curve and length for every card animation, so a card turns,
+     widens and zooms together in a single movement */
+  --fan-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --fan-speed: 0.55s;
+  --slot: 134px;        /* space each card takes in the row (the cover overlaps the next one) */
+  --slot-open: 196px;   /* hovered / selected card's space */
   --cover-w: 236px;
   --cover-h: 320px;
   margin-top: 24px;
@@ -17,7 +21,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 10px;
   height: calc(var(--cover-h) * 1.3 + 40px); /* room for the zoomed card */
   /* the last (tilted) cover hangs past its slot; this keeps the fan visually centered */
   padding-right: calc(var(--slot) * 0.3);
@@ -29,9 +33,12 @@
   flex: 0 0 auto;
   width: var(--slot);
   height: var(--cover-h);
-  transition: width 0.3s, scale 0.3s, filter 0.3s;
+  transition: width var(--fan-speed) var(--fan-ease), scale var(--fan-speed) var(--fan-ease),
+    translate var(--fan-speed) var(--fan-ease), filter var(--fan-speed) var(--fan-ease);
 }
-/* the cover is a <button> (select / open); drop the button look */
+/* cards YOU voted for sit higher than the rest (selected or not) */
+.fan-card.my-vote { translate: 0 -42px; }
+/* the cover is a <button> (click = vote); drop the button look */
 .fan-select {
   all: unset;
   position: absolute;
@@ -52,7 +59,9 @@
   box-shadow: -20px 0 20px rgba(0, 0, 0, 0.4);
   transform: rotateY(40deg);
   transform-origin: left center;
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition: transform var(--fan-speed) var(--fan-ease), box-shadow var(--fan-speed) var(--fan-ease),
+    filter 0.2s;
+  will-change: transform; /* keeps the 3D turn on the GPU */
 }
 .fan-cover img {
   width: 100%;
@@ -92,12 +101,10 @@
   color: var(--muted);
 }
 
-/* hover: widen and straighten a little */
-.fan-card:hover { width: var(--slot-open); }
-.fan-card:hover .fan-cover {
-  transform: rotateY(20deg);
-  box-shadow: -5px 0 5px rgba(0, 0, 0, 0.8);
-}
+/* hover: just a slight lift (no change in size or angle). Resting on a card
+   selects it, so it animates ONCE from the fan straight to the selected
+   state, instead of to a half-turned hover state first. */
+.fan-card:hover:not(.selected) .fan-cover { filter: brightness(1.12); }
 
 /* selected: face forward, zoom in, everything else blurs */
 .fan-card.selected {
@@ -110,7 +117,6 @@
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 }
 .fan-cards.has-selection .fan-card:not(.selected) { filter: blur(3px) brightness(0.85); }
-.fan-cards.has-selection .fan-card:not(.selected):hover { filter: blur(1px); } /* still clickable */
 
 .fan-card.is-hidden img { filter: grayscale(1) brightness(0.6); }
 
@@ -123,10 +129,10 @@
   font-size: 16px;
   line-height: 1;
 }
-.fan-interest svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6)); } /* pips show the dark cover through */
+.fan-interest svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6)); } /* lifts the dice off the cover */
 
 /* ---------- votes ---------- */
-/* 👍 button: top-right of the part of the card you can see */
+/* vote button (square-check): top-right of the part of the card you can see */
 .vote-button {
   position: absolute;
   top: 10px;
@@ -135,17 +141,18 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 9px;
-  border-radius: 99px;
-  font-size: 14px;
+  padding: 4px 2px;
+  border-radius: 4px;
+  font-size: 22px;
   line-height: 1.2;
   background: rgba(10, 5, 15, 0.72);
   color: var(--text);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-  transition: right 0.3s, background 0.2s, transform 0.15s;
+  transition: right var(--fan-speed) var(--fan-ease), background 0.2s, transform 0.15s;
 }
 .vote-button:hover { transform: scale(1.08); }
 .vote-button.voted { background: var(--accent); color: var(--accent-text); }
+.vote-button.has-votes { padding: 4px 9px 4px 2px; }
 .vote-count { font-size: 12px; font-weight: 700; }
 /* when the card faces forward, move the button to the cover's real top-right corner */
 .fan-card.selected .vote-button { right: calc(var(--slot-open) - var(--cover-w) + 10px); }
@@ -175,10 +182,20 @@
 .voter-badge.more { background: rgba(10, 5, 15, 0.8); font-size: 10px; }
 
 .fan-info { margin-top: 4px; min-height: 1.6em; }
+/* nothing selected: the info area keeps its size but shows nothing */
+.fan-info.is-placeholder { visibility: hidden; }
+/* title line: centered under the selected card (GameFan sets the translateX) */
+.fan-title {
+  width: max-content;
+  max-width: 100%;
+  text-align: center;
+  transition: transform 0.12s linear; /* smooths the per-frame follow (GameFan.tsx) */
+}
+.fan-title .owners { margin: 2px 0 0; }
 
 /* smaller screens: smaller cards; on phones the row scrolls sideways */
 @media (max-width: 1000px) {
-  .fan { --slot: 84px; --slot-open: 130px; --cover-w: 168px; --cover-h: 228px; }
+  .fan { --slot: 92px; --slot-open: 136px; --cover-w: 168px; --cover-h: 228px; }
   .fan-caption { padding: 1.5rem 0.6rem 0.6rem; }
   .fan-name { font-size: 18px; }
   .fan-stats { font-size: 10px; }
@@ -187,10 +204,10 @@
   .fan-cards {
     justify-content: flex-start;
     overflow-x: auto;
-    padding: 0 var(--slot) 0 16px;
+    padding: 42px var(--slot) 0 16px; /* room above for raised (voted) cards */
     scrollbar-width: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .fan-card, .fan-cover, .vote-button { transition: none; }
+  .fan-card, .fan-cover, .vote-button, .fan-title { transition: none; }
 }

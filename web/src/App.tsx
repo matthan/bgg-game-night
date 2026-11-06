@@ -306,7 +306,19 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
     return () => clearTimeout(t);
   }, [justHidden]);
 
-  const listDate = list ? new Date(list.createdAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "";
+  // Who made the list and when: not shown on the page, kept in the page's
+  // <meta name="game-list"> tag for now (e.g. for later use / debugging).
+  useEffect(() => {
+    if (!list) return;
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="game-list"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "game-list";
+      document.head.appendChild(meta);
+    }
+    const made = new Date(list.createdAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+    meta.content = `Game list #${list.id} made${list.createdBy ? ` by ${list.createdBy}` : ""} · ${made}`;
+  }, [list?.id, list?.createdBy, list?.createdAt]);
 
   return (
     <main className="app">
@@ -357,9 +369,6 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
       )}
       {list && (
         <>
-          <p id="list-meta" className="muted list-meta">
-            Game list made{list.createdBy ? ` by ${list.createdBy}` : ""} · {listDate}
-          </p>
           <ListDisplay
             games={list.games.slice(0, MAX_RESULTS)} // older lists may have had 8
             showOwners={loaded.length > 1}

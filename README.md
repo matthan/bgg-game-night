@@ -64,7 +64,7 @@ same username lock it out for a while.
 ## The game list
 
 Nothing is picked automatically. The admin (matthan) sets the filters and clicks
-**Create game list**: 8 random games that match are saved as the current list
+**Create game list**: 7 random games that match are saved as the current list
 (`game_lists` table), together with the filters used. Everyone sees that list
 and those filters (read-only) until the admin creates a new one. Older lists
 are kept as history.
@@ -73,8 +73,16 @@ When the admin **hides** a game, it leaves the results everywhere and its spot
 in the list is filled with another random game that fits the list's filters
 (Undo puts it back).
 
-**Voting:** everyone signed in can vote 👍 for any games in the current list
-(one vote per game). Each card shows the vote count and a colored badge per
+**Browsing the list:** rest the mouse on a card to select it (it turns to face
+you and the others blur); it stays selected while you move down to its title
+and interest slider. Click elsewhere or press Escape to go back to the fan.
+On touch screens, tap a card to select it. The title under the card links to BoardGameGeek. Who made the list
+and when is kept in the page's `<meta name="game-list">` tag.
+
+**Voting:** everyone signed in can vote for any games in the current list
+(one vote per game): click the card (on touch screens, tap it again once
+selected) or its 👍 button; click again to take the vote back. Cards you voted
+for sit a little higher than the rest. Each card shows the vote count and a colored badge per
 voter. Votes belong to the list: creating a new list erases them, and a hidden
 game's votes go with it. Pages re-check the list every 15 seconds.
 
@@ -82,11 +90,11 @@ game's votes go with it. Pages re-check the list every 15 seconds.
 
 Everyone signed in can say how keen they are on each game, shown as a die
 from six pips down to one: Yes, please! · Sounds great · Sure thing ·
-Slightly · Not particularly · Rather not — or no opinion. Select a card to set
-yours (click it again to clear it) and to see everyone's. Each card also shows
-everyone's dice. The labels, dice and colors live in `web/src/interest.ts`. Unlike votes, interest is
-kept permanently per person per game (`game_interest` table), so it carries
-over to future lists.
+Slightly · Not particularly · Rather not — or no opinion. Select a card, then
+drag the **Rate your interest** slider (far left = no opinion); it saves a
+moment after you stop. Each card shows everyone's dice. The labels, dice and colors live in `web/src/interest.ts`.
+Unlike votes, interest is kept permanently per person per game
+(`game_interest` table), so it carries over to future lists.
 
 ## Adding games by hand
 

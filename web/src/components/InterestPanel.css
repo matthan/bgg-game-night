@@ -1,58 +1,123 @@
-/* Interest picker + everyone's interest, shown under the selected game. */
+/* "Rate your interest" slider, shown under the selected game. */
 .interest-panel {
-  margin: 14px auto 0;
-  max-width: 820px;
+  box-sizing: border-box;
+  width: min(820px, 100%);
+  margin: 18px auto 0;
+  padding: 10px 20px 10px 30px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* ---------- the sliding scale (adapted from a CodePen) ---------- */
+/* one row: label · slider · chosen level (stacks on narrow screens) */
+.interest-rate {
+  --handle: 54px;   /* the die you drag */
+  --tick: 21px;     /* the dice along the line */
+  --track-h: 60px;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
   align-items: center;
+  gap: 18px;
+  width: 100%;
+}
+/* small caps label between two rules */
+.interest-rate-heading {
+  flex: 0 0 auto;
+  padding: 4px 0 2px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--muted);
+}
+/* the chosen level, big, in its color (fixed width so the slider doesn't jump) */
+.interest-rate-output {
+  flex: 0 0 210px;
+  font-family: var(--font-heading);
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-align: left;
+  color: var(--level-color);
+  transition: color 0.2s;
 }
 
-.interest-choices {
+/* track: a thick black line + dice at each stop, with the (transparent) range input on top */
+.interest-track {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 260px;
+  height: var(--track-h);
+}
+.interest-line {
+  position: absolute;
+  left: calc(var(--handle) / 2);
+  right: calc(var(--handle) / 2);
+  top: 50%;
+  height: 8px;
+  transform: translateY(-50%); /* exactly centered, like the dice */
+  background: #000;
+  border-radius: 4px;
+}
+/* lined up with where the handle sits at each stop */
+.interest-ticks {
+  position: absolute;
+  inset: 0;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 6px;
+  padding: 0 calc(var(--handle) / 2 - var(--tick) / 2);
+  pointer-events: none; /* clicks go to the slider, which jumps to that stop */
 }
-.interest-heading { font-size: 13px; color: var(--muted); margin-right: 4px; }
-.interest-choice {
-  padding: 5px 12px;
-  border-radius: 99px;
-  font-size: 13px;
-  font-weight: 500;
-  background: var(--field);
-  color: var(--text);
-  border: 2px solid transparent;
-  transition: border-color 0.15s, background 0.15s;
-}
-.interest-choice:hover { border-color: var(--level-color); }
-.interest-choice.chosen {
-  background: var(--level-color);
-  border-color: var(--level-color);
-  color: #fff;
-  font-weight: 700;
-}
+.interest-tick { display: block; width: var(--tick); height: var(--tick); }
+.interest-tick .die { display: block; height: 100%; margin: 0 auto; filter: saturate(0.8); } /* 20% duller than the handle */
 
-/* the die icons: drawn in the level's color (white on the chosen button) */
-.interest-die { color: var(--level-color); font-size: 1.15em; vertical-align: -0.15em; }
-.interest-choice.chosen .interest-die { color: #fff; }
-
-.interest-everyone {
-  list-style: none;
+.interest-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px 10px;
-  font-size: 13px;
+  background: transparent;
+  cursor: pointer;
 }
-.interest-everyone li {
-  padding: 3px 10px 3px 8px;
-  border-radius: 6px;
-  border-left: 4px solid var(--level-color);
-  background: var(--surface);
+.interest-slider:focus,
+.interest-slider:focus-visible { outline: none; }
+.interest-slider::-webkit-slider-runnable-track { height: 100%; background: transparent; }
+.interest-slider::-moz-range-track { height: 100%; background: transparent; }
+/* the handle: the chosen die, no border (InterestPanel sets --handle-img for each level) */
+.interest-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: var(--handle);
+  height: var(--handle);
+  margin-top: calc((var(--track-h) - var(--handle)) / 2);
+  border: 0;
+  outline: none;
+  background: var(--handle-img) center / contain no-repeat;
+  cursor: grab;
 }
-.interest-everyone li.no-opinion { border-left-color: var(--border); color: var(--muted); }
-.interest-everyone strong { font-weight: 600; }
+.interest-slider::-moz-range-thumb {
+  width: var(--handle);
+  height: var(--handle);
+  border: 0;
+  outline: none;
+  background: var(--handle-img) center / contain no-repeat;
+  cursor: grab;
+}
+.interest-slider:active::-webkit-slider-thumb { cursor: grabbing; }
+/* keyboard users still see where they are: a soft glow instead of a border */
+.interest-slider:focus-visible::-webkit-slider-thumb { filter: drop-shadow(0 0 6px var(--accent)); }
+.interest-slider:focus-visible::-moz-range-thumb { filter: drop-shadow(0 0 6px var(--accent)); }
+
+@media (max-width: 700px) {
+  .interest-rate { flex-wrap: wrap; justify-content: center; }
+  .interest-track { order: 3; flex-basis: 100%; }
+  .interest-rate-output { flex-basis: auto; }
+}
