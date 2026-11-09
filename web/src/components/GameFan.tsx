@@ -37,8 +37,8 @@ const VERTICAL_FAN = "(max-width: 1023px)"; // must match the phone section of G
 // them; the box fades out once the last card has landed. Passed to CSS as
 // variables so GameFan.css uses the same timings.
 const INTRO_START_MS = 550; // the page title's animation (index.css) is done by then
-const INTRO_STAGGER_MS = 90; // between one card and the next
-const INTRO_CARD_MS = 600; // each card's own animation
+const INTRO_STAGGER_MS = 110; // between one card and the next
+const INTRO_CARD_MS = 750; // each card's own animation
 
 const bggUrl = (id: number) => `https://boardgamegeek.com/boardgame/${id}`;
 
@@ -263,7 +263,7 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
               "--intro-start": `${INTRO_START_MS}ms`,
               "--intro-stagger": `${INTRO_STAGGER_MS}ms`,
               "--intro-card": `${INTRO_CARD_MS}ms`,
-              "--intro-count": games.length,
+              "--intro-count": games.length, // also used by the phone layout
             } as CSSProperties
           }
         >
@@ -394,11 +394,16 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
         )}
 
         {/* The interest slider: under the fan on desktop, beside it (rotated) on
-          phones; lined up with the selected card (see placeTitle). Invisible
-          but still taking its space when nothing is selected. */}
+          phones; lined up with the selected card (see placeTitle). With nothing
+          selected the slider is invisible (still taking its space) and a
+          placeholder in its place says what to do. */}
         {shown && onSetInterest && me && shown.interest && (
-          <div className={`fan-rate${active ? "" : " is-placeholder"}`} aria-hidden={active ? undefined : true}>
-            <div className="fan-rate-follow" ref={rateRef}>
+          <div className={`fan-rate${active ? "" : " is-placeholder"}`}>
+            <div className="fan-rate-hint" aria-hidden={active ? true : undefined}>
+              <span className="hint-hover">Hover a game to rate your interest</span>
+              <span className="hint-touch">Tap a game to rate your interest</span>
+            </div>
+            <div className="fan-rate-follow" ref={rateRef} aria-hidden={active ? undefined : true}>
               <InterestPanel
                 key={shown.id} // a fresh slider for each game
                 game={shown as ListGame}

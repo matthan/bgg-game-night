@@ -171,16 +171,51 @@
 
 
 .fan-info { margin-top: 4px; min-height: 1.6em; }
-/* nothing selected: these keep their size but show nothing */
+/* nothing selected: these keep their size; the slider is swapped for a
+   placeholder (below), the Hide button shows nothing */
 .fan-info,
-.fan-rate { transition: opacity 0.35s ease, visibility 0.35s; }
+.fan-rate-follow,
+.fan-rate-hint { transition: opacity 0.35s ease, visibility 0.35s; }
 .fan-info.is-placeholder,
-.fan-rate.is-placeholder { opacity: 0; visibility: hidden; } /* fades in when a card is selected */
+.fan-rate.is-placeholder .fan-rate-follow,
+.fan-rate:not(.is-placeholder) .fan-rate-hint { opacity: 0; visibility: hidden; }
 
 /* the interest slider's lane under the fan; .fan-rate-follow slides along it
    to sit under the selected card (GameFan sets the transform) */
 .fan-rate { position: relative; margin-top: 14px; }
 .fan-rate-follow { width: max-content; max-width: 100%; will-change: transform; } /* moved (and eased) by GameFan.tsx */
+
+/* the slider's placeholder: a dashed box where the slider will appear, saying
+   what to do (hover with a mouse, tap on touch screens) */
+.fan-rate-hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.fan-rate-hint > span {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-width: min(480px, 100%);
+  padding: 0 28px;
+  border: 2px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.hint-touch { display: none !important; }
+@media (hover: none) {
+  .hint-hover { display: none !important; }
+  .hint-touch { display: grid !important; }
+}
 /* Hide button (admin): centered under the selected card (GameFan sets the translateX) */
 .fan-title {
   width: max-content;
@@ -198,8 +233,8 @@
  * usually there), tilted back, with the next card overlapping the rest.
  * - selected: the card straightens and opens to its full (shorter) height
  * - voted for: the card slides to the right
- * The total height never changes (the space a selected card takes is the
- * space the last card's overhang used), so the page below doesn't jump.
+ * The total height never changes (the closed cards' strips shrink to make
+ * room for the open one), so the page below doesn't jump.
  */
 @media (max-width: 1023px) {
   .fan {
@@ -221,6 +256,16 @@
   }
   .fan-info { grid-column: 1; grid-row: 2; }
   .fan-rate { grid-column: 2; grid-row: 1; align-self: stretch; margin: 0; }
+  /* placeholder: a tall dashed strip down the middle of the column, text turned
+     like the slider */
+  .fan-rate-hint { inset: 0; }
+  .fan-rate-hint > span {
+    width: var(--rail);
+    min-width: 0;
+    height: min(var(--rate-len), 100%);
+    padding: 24px 0;
+    writing-mode: vertical-rl;
+  }
   /* the slider, turned 90° (no opinion at the top), sliding up and down */
   .fan-rate-follow {
     position: absolute;
@@ -244,13 +289,12 @@
     padding: 0 0 calc(var(--cover-h) - var(--row));
     transition: padding var(--fan-speed) var(--fan-ease);
   }
-  .fan-cards.has-selection { padding-bottom: 0; } /* ...unless a card is open */
 
   .fan-card { width: calc(100% - var(--shift)); height: var(--row); }
-  /* opening animation: top to bottom, dropping in from above */
-  @keyframes fan-card-in {
-    from { opacity: 0; transform: translateY(-40px) rotate(-5deg); }
-    to { opacity: 1; transform: none; }
+  /* when a card opens, the others' strips get a little shorter to make room,
+     so the list keeps the same height (and the last card keeps its overhang) */
+  .fan-cards.has-selection .fan-card:not(.selected) {
+    height: calc(var(--row) - (var(--cover-h) - var(--row)) / max(var(--intro-count) - 1, 1));
   }
   .fan-card.my-vote { translate: var(--shift) 0; }
   .fan-select { perspective: 900px; }
@@ -276,15 +320,16 @@
   .fan-name { font-size: 22px; }
 }
 /* ---------- opening animation (GameFan.tsx sets the timing variables) ---------- */
-/* each card fades in, sliding in from the left with a little turn, one after
-   another; uses `transform`, which the selected/voted styles don't touch */
+/* each card fades in, sliding in from the right while swinging round on its
+   vertical axis (rotateY), one after another; uses `transform`, which the
+   selected/voted styles don't touch */
 .fan-cards.intro .fan-card {
   animation: fan-card-in var(--intro-card) var(--fan-ease)
     calc(var(--intro-start) + var(--i) * var(--intro-stagger)) both;
 }
 @keyframes fan-card-in {
-  from { opacity: 0; transform: translateX(-70px) rotate(-12deg); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; transform: perspective(900px) translateX(90px) rotateY(55deg); }
+  to { opacity: 1; transform: perspective(900px) translateX(0) rotateY(0); }
 }
 /* the "Vote" box over the cards: fades in with the title, out after the last card */
 .fan-cards { position: relative; }
@@ -301,20 +346,30 @@
       calc(var(--intro-start) + (var(--intro-count) - 1) * var(--intro-stagger) + var(--intro-card) * 0.7) forwards;
 }
 .fan-intro-vote span {
-  padding: 14px 44px;
+  padding: 24px 64px;
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   font-family: var(--font-heading);
-  font-size: 56px;
+  font-size: 40px;
   line-height: 1;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+/* phones (vertical fan): top to bottom, rising in from below while tipping
+   forward on the horizontal axis (rotateX). Its own name, and placed after the
+   desktop rule, so it reliably replaces the desktop rotateY swing. */
+@keyframes fan-card-in-vertical {
+  from { opacity: 0; transform: perspective(800px) translateY(60px) rotateX(-55deg); }
+  to { opacity: 1; transform: perspective(800px) translateY(0) rotateX(0); }
+}
+@media (max-width: 1023px) {
+  .fan-cards.intro .fan-card { animation-name: fan-card-in-vertical; }
 }
 @keyframes fan-vote-in { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: none; } }
 @keyframes fan-vote-out { from { opacity: 1; } to { opacity: 0; transform: scale(1.04); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .fan-card, .fan-cover, .vote-button, .fan-info, .fan-rate { transition: none; }
+  .fan-card, .fan-cover, .vote-button, .fan-info, .fan-rate-follow, .fan-rate-hint { transition: none; }
   .fan-cards.intro .fan-card, .fan-intro-vote { animation: none; }
 }

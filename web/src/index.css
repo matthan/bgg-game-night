@@ -46,6 +46,7 @@ h1, h2, h3, legend {
 }
 
 .site-header { text-align: center; margin: 130px 0 80px; }
+@media (max-width: 1023px) { .site-header { margin-top: 80px; } } /* phones/tablets: less space above the title */
 /* opening animation: label, heading, tagline each drop in and fade in, a beat apart
    (then the cards follow: GameFan.css). The account bar above doesn't move. */
 .site-header > * { animation: header-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
