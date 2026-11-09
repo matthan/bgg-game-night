@@ -46,6 +46,16 @@ h1, h2, h3, legend {
 }
 
 .site-header { text-align: center; margin: 130px 0 80px; }
+/* opening animation: label, heading, tagline each drop in and fade in, a beat apart
+   (then the cards follow: GameFan.css). The account bar above doesn't move. */
+.site-header > * { animation: header-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.site-header > :nth-child(2) { animation-delay: 0.1s; }
+.site-header > :nth-child(3) { animation-delay: 0.2s; }
+@keyframes header-in {
+  from { opacity: 0; transform: translateY(-18px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .site-header > * { animation: none; } }
 /* header text is 20% larger than the base sizes (64px title, 13px label, 16px subtitle) */
 .site-header h1 { margin: 0 0 8px; font-size: clamp(48px, 13vw, 77px); line-height: 1; } /* shrinks on phones */
 .site-header .muted { margin: 0; font-size: 19px; }

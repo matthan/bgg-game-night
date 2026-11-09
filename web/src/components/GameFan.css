@@ -247,6 +247,11 @@
   .fan-cards.has-selection { padding-bottom: 0; } /* ...unless a card is open */
 
   .fan-card { width: calc(100% - var(--shift)); height: var(--row); }
+  /* opening animation: top to bottom, dropping in from above */
+  @keyframes fan-card-in {
+    from { opacity: 0; transform: translateY(-40px) rotate(-5deg); }
+    to { opacity: 1; transform: none; }
+  }
   .fan-card.my-vote { translate: var(--shift) 0; }
   .fan-select { perspective: 900px; }
   .fan-cover {
@@ -270,6 +275,46 @@
   .fan-card:not(.selected) .fan-caption { opacity: 0; }
   .fan-name { font-size: 22px; }
 }
+/* ---------- opening animation (GameFan.tsx sets the timing variables) ---------- */
+/* each card fades in, sliding in from the left with a little turn, one after
+   another; uses `transform`, which the selected/voted styles don't touch */
+.fan-cards.intro .fan-card {
+  animation: fan-card-in var(--intro-card) var(--fan-ease)
+    calc(var(--intro-start) + var(--i) * var(--intro-stagger)) both;
+}
+@keyframes fan-card-in {
+  from { opacity: 0; transform: translateX(-70px) rotate(-12deg); }
+  to { opacity: 1; transform: none; }
+}
+/* the "Vote" box over the cards: fades in with the title, out after the last card */
+.fan-cards { position: relative; }
+.fan-intro-vote {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  animation:
+    fan-vote-in 0.35s ease 0.25s both,
+    fan-vote-out 0.45s ease
+      calc(var(--intro-start) + (var(--intro-count) - 1) * var(--intro-stagger) + var(--intro-card) * 0.7) forwards;
+}
+.fan-intro-vote span {
+  padding: 14px 44px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-family: var(--font-heading);
+  font-size: 56px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+@keyframes fan-vote-in { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: none; } }
+@keyframes fan-vote-out { from { opacity: 1; } to { opacity: 0; transform: scale(1.04); } }
+
 @media (prefers-reduced-motion: reduce) {
   .fan-card, .fan-cover, .vote-button, .fan-info, .fan-rate { transition: none; }
+  .fan-cards.intro .fan-card, .fan-intro-vote { animation: none; }
 }

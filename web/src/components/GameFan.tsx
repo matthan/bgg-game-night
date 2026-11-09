@@ -1,4 +1,5 @@
 import {
+  type CSSProperties,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -30,6 +31,14 @@ const HOVER_DELAY_MS = 150; // hovering this long selects a card (sweeping acros
 const FOLLOW_MS = 700; // the card animation (0.55s in GameFan.css) plus a little slack
 const FOLLOW_EASE = 0.16; // share of the remaining distance the slider/Hide move each frame (~0.4s glide)
 const VERTICAL_FAN = "(max-width: 1023px)"; // must match the phone section of GameFan.css
+
+// Opening animation (once, when the fan first appears): after the page title
+// has dropped in, the cards fly in one by one while a "Vote" box shows over
+// them; the box fades out once the last card has landed. Passed to CSS as
+// variables so GameFan.css uses the same timings.
+const INTRO_START_MS = 550; // the page title's animation (index.css) is done by then
+const INTRO_STAGGER_MS = 90; // between one card and the next
+const INTRO_CARD_MS = 600; // each card's own animation
 
 const bggUrl = (id: number) => `https://boardgamegeek.com/boardgame/${id}`;
 
@@ -63,6 +72,8 @@ function formatPlayersAndBest(g: OwnedGame) {
  */
 export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
+  // true during the opening animation; cards added later (e.g. after a Hide) just appear
+  const [intro, setIntro] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const rootRef = useRef<HTMLElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const titleRef = useRef<HTMLDivElement>(null);
@@ -188,6 +199,15 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
     };
   }, [placeTitle, active?.id, active?.votes?.length]);
 
+  // End the opening animation once the last card and the "Vote" box are done.
+  const introMs = INTRO_START_MS + Math.max(games.length - 1, 0) * INTRO_STAGGER_MS + INTRO_CARD_MS + 500;
+  useEffect(() => {
+    if (!intro) return;
+    const t = setTimeout(() => setIntro(false), introMs);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (games.length === 0) {
     return <p className="empty">No games match those filters. Try loosening them.</p>;
   }
@@ -234,7 +254,24 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
   return (
     <section id="carousel" className="fan" aria-label="Game list" ref={rootRef}>
       <div className="fan-body">
-        <div ref={cardsRef} className={`fan-cards${index !== null ? " has-selection" : ""}`} onKeyDown={handleKeyDown}>
+        <div
+          ref={cardsRef}
+          className={`fan-cards${index !== null ? " has-selection" : ""}${intro ? " intro" : ""}`}
+          onKeyDown={handleKeyDown}
+          style={
+            {
+              "--intro-start": `${INTRO_START_MS}ms`,
+              "--intro-stagger": `${INTRO_STAGGER_MS}ms`,
+              "--intro-card": `${INTRO_CARD_MS}ms`,
+              "--intro-count": games.length,
+            } as CSSProperties
+          }
+        >
+          {intro && (
+            <div className="fan-intro-vote" aria-hidden>
+              <span>Vote</span>
+            </div>
+          )}
           {games.map((g, i) => {
             const votes = g.votes ?? [];
             const iVoted = !!me && votes.includes(me);
@@ -245,6 +282,7 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
                   cardRefs.current[i] = el;
                 }}
                 className={`fan-card${i === index ? " selected" : ""}${g.hidden ? " is-hidden" : ""}${iVoted ? " my-vote" : ""}`}
+                style={{ "--i": i } as CSSProperties} // its place in the opening animation
                 onPointerMove={(e) => handlePointerMove(e, i)}
                 onPointerDown={(e) => (lastPointer.current = e.pointerType)}
                 onPointerLeave={cancelHover}
