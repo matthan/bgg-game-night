@@ -11,7 +11,7 @@
   --fan-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --fan-speed: 0.55s;
   --slot: 134px;        /* space each card takes in the row (the cover overlaps the next one) */
-  --slot-open: 196px;   /* hovered / selected card's space */
+  --slot-open: 196px;   /* selected card's space */
   --cover-w: 236px;
   --cover-h: 320px;
   margin-top: 24px;
@@ -39,7 +39,7 @@
 }
 /* cards YOU voted for sit higher than the rest (selected or not) */
 .fan-card.my-vote { translate: 0 -42px; }
-/* the cover acts as a button (click = vote); no button look */
+/* the cover acts as a button (click = select); no button look */
 .fan-select {
   all: unset;
   position: absolute;
@@ -113,10 +113,11 @@
   color: var(--muted);
 }
 
-/* hover: just a slight lift (no change in size or angle). Resting on a card
-   selects it, so it animates ONCE from the fan straight to the selected
-   state, instead of to a half-turned hover state first. */
-.fan-card:hover:not(.selected) .fan-cover { filter: brightness(1.12); }
+/* hover (mouse only): a slight lift and a subtle turn toward you (no change in
+   size, so nothing shifts); clicking the card opens it */
+@media (hover: hover) {
+  .fan-card:hover:not(.selected) .fan-cover { filter: brightness(1.12); transform: rotateY(34deg); }
+}
 
 /* selected: face forward, zoom in, everything else blurs */
 .fan-card.selected {
@@ -145,6 +146,7 @@
 
 /* ---------- votes ---------- */
 /* vote button (square-check): top-right of the part of the card you can see */
+/* round: a circle with just the icon, a pill once it has a count or label */
 .vote-button {
   position: absolute;
   top: 10px;
@@ -152,20 +154,48 @@
   z-index: 3;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 2px;
-  border-radius: 4px;
+  justify-content: center;
+  height: 42px;
+  min-width: 42px; /* wider than the icon + padding, so with just the icon it's a circle */
+  padding: 0 6px;
+  border-radius: 999px;
   font-size: 22px;
-  line-height: 1.2;
+  line-height: 1;
   background: rgba(10, 5, 15, 0.72);
   color: var(--text);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-  transition: right var(--fan-speed) var(--fan-ease), background 0.2s, transform 0.15s;
+  transition: right var(--fan-speed) var(--fan-ease), top var(--fan-speed) var(--fan-ease), background 0.2s,
+    transform 0.15s;
 }
+/* on closed cards the button sits 12px higher, nearer the top edge */
+.fan-card:not(.selected) .vote-button { top: -2px; }
 .vote-button:hover { transform: scale(1.08); }
 .vote-button.voted { background: var(--accent); color: var(--accent-text); }
-.vote-button.has-votes { padding: 4px 9px 4px 2px; }
-.vote-count { font-size: 12px; font-weight: 700; }
+.vote-button.has-votes { padding: 0 12px 0 9px; }
+/* label and count in the heading font (Bebas Neue), lined up with the icon */
+.vote-label,
+.vote-count {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  padding-top: 2px; /* Bebas sits high in its line box; this centers its capitals on the icon */
+}
+.vote-count { margin-left: 5px; }
+/* "Vote" / "Voted": hidden until you hover (or focus) the button, then slides out */
+.vote-label {
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: max-width 0.3s var(--fan-ease), margin 0.3s var(--fan-ease), opacity 0.2s;
+}
+.vote-button:hover .vote-label,
+.vote-button:focus-visible .vote-label { max-width: 70px; margin-left: 6px; opacity: 1; }
+.vote-button:hover:not(.has-votes),
+.vote-button:focus-visible:not(.has-votes) { padding-right: 12px; }
 /* when the card faces forward, move the button to the cover's real top-right corner */
 .fan-card.selected .vote-button { right: calc(var(--slot-open) - var(--cover-w) + 10px); }
 
@@ -310,6 +340,10 @@
 
   .fan-card.selected { width: calc(100% - var(--shift)); height: var(--cover-h); scale: 1; }
   .fan-card.selected .fan-cover { transform: rotateX(0); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); }
+  /* hover (mouse only): the subtle turn is on the horizontal axis here */
+  @media (hover: hover) {
+    .fan-card:hover:not(.selected) .fan-cover { transform: rotateX(-22deg); }
+  }
   .fan-card.selected .vote-button { right: 10px; }
 
   .fan-caption { padding: 1.8rem 0.8rem 0.7rem; transition: opacity var(--fan-speed) var(--fan-ease); }

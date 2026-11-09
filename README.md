@@ -75,10 +75,9 @@ When the admin **hides** a game, it leaves the results everywhere and its spot
 in the list is filled with another random game that fits the list's filters
 (Undo puts it back).
 
-**Browsing the list:** rest the mouse on a card to select it (it turns to face
-you and the others blur); it stays selected while you move down to its
-and interest slider. Click elsewhere or press Escape to go back to the fan.
-On touch screens, tap a card to select it.
+**Browsing the list:** click (or tap) a card to open it: it turns to face you
+and the others blur. Click it again, click elsewhere or press Escape to go
+back to the fan.
 On screens narrower than 1024px (phones, tablets) the fan runs down the page:
 each card shows the top of its box art, the selected card opens to full
 height, and cards you voted for slide to the right. The interest slider sits in
@@ -89,8 +88,8 @@ on desktop, beside it on phones) without going past the ends of the list. The ga
 and when is kept in the page's `<meta name="game-list">` tag.
 
 **Voting:** everyone signed in can vote for any games in the current list
-(one vote per game): click the card (on touch screens, tap it again once
-selected) or its 👍 button; click again to take the vote back. Cards you voted
+(one vote per game) with the round 👍 button on each card (hovering it shows
+"Vote"); click it again to take the vote back. Clicking a card just selects it. Cards you voted
 for sit a little higher than the rest. Each card's 👍 button shows the vote
 count (hover it to see who). Votes belong to the list: creating a new list erases them, and a hidden
 game's votes go with it. Pages re-check the list every 15 seconds.

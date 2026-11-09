@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
-  type PointerEvent,
 } from "react";
 import type { InterestLevel, ListGame, OwnedGame } from "../types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -27,7 +26,6 @@ interface Props {
   onSetInterest?: (game: ListGame, level: InterestLevel | null) => void;
 }
 
-const HOVER_DELAY_MS = 150; // hovering this long selects a card (sweeping across the fan doesn't)
 const FOLLOW_MS = 700; // the card animation (0.55s in GameFan.css) plus a little slack
 const FOLLOW_EASE = 0.16; // share of the remaining distance the slider/Hide move each frame (~0.4s glide)
 const VERTICAL_FAN = "(max-width: 1023px)"; // must match the phone section of GameFan.css
@@ -56,16 +54,12 @@ function formatPlayersAndBest(g: OwnedGame) {
  * Every game in the list visible at once, as a fan of tilted 3D cards
  * (adapted from a CodePen). Same props as GameCarousel, so App can swap them.
  *
- * - hover a card (mouse): it's selected — straightened, zoomed in, the others
- *   blur. It STAYS selected when the mouse leaves, so you can reach the
- *   title and the interest slider below it.
- * - click a card: vote for it (click again to take the vote back). Cards you
- *   voted for sit 42px higher than the rest.
- * - tap a card (touch screens, no hover): the first tap selects it, the next
- *   tap votes
+ * - click / tap a card: it opens (selected) — straightened, zoomed in, the
+ *   others blur; click it again to close it
+ * - vote with the 👍 button only (hover it: "Vote" slides out). Cards you
+ *   voted for sit higher (desktop) or further right (phones) than the rest.
  * - click anywhere else (or press Escape): back to the fan
- * - the title under the fan (a link to BoardGameGeek) sits centered under
- *   the selected card
+ * - the game's name on the card links to BoardGameGeek
  *
  * The selection is stored by POSITION, so when a game is hidden and another
  * fills its spot, the new game is selected in its place.
@@ -79,9 +73,6 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
   const titleRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
   const rateRef = useRef<HTMLDivElement>(null); // the interest slider's moving box
-  const hoverTimer = useRef<ReturnType<typeof setTimeout>>();
-  const hoverTarget = useRef<number | null>(null); // the card the hover timer will select
-  const lastPointer = useRef<string>("mouse"); // "touch" taps select before they vote
 
   // If the list got shorter, drop a selection that no longer exists.
   const index = selected !== null && selected < games.length ? selected : null;
@@ -101,8 +92,6 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
       document.removeEventListener("keydown", onKey);
     };
   }, []);
-
-  useEffect(() => () => clearTimeout(hoverTimer.current), []);
 
   // Keep the Hide button and the interest slider lined up with the selected
   // card, but inside the card list:
@@ -212,34 +201,10 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
     return <p className="empty">No games match those filters. Try loosening them.</p>;
   }
 
-  // Mouse: resting on a card selects it (after a short pause). Uses pointer
-  // MOVE, not just enter, so a mouse that was already over a card (e.g. after
-  // a reload) still works. Touch has no hover, so taps select instead.
-  function handlePointerMove(e: PointerEvent, i: number) {
-    if (e.pointerType !== "mouse" || i === index || hoverTarget.current === i) return;
-    clearTimeout(hoverTimer.current);
-    hoverTarget.current = i;
-    hoverTimer.current = setTimeout(() => {
-      hoverTarget.current = null;
-      setSelected(i);
-    }, HOVER_DELAY_MS);
-  }
-  function cancelHover() {
-    clearTimeout(hoverTimer.current);
-    hoverTarget.current = null;
-  }
-
+  // Clicking / tapping a card opens (selects) it; clicking it again closes it.
+  // Voting is the 👍 button only. Clicking outside the fan or Escape also closes.
   function handleCardClick(i: number) {
-    cancelHover();
-    const g = games[i];
-    const canVote = !!onToggleVote && !!g.votes;
-    // touch has no hover: the first tap selects, so you can see the card before voting
-    if (!canVote || (lastPointer.current !== "mouse" && i !== index)) {
-      setSelected(i === index ? null : i);
-      return;
-    }
-    setSelected(i);
-    onToggleVote(g as ListGame); // clicking a card votes for it (or takes the vote back)
+    setSelected(i === index ? null : i);
   }
 
   // Arrow keys move the selection along the fan.
@@ -283,11 +248,8 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
                 }}
                 className={`fan-card${i === index ? " selected" : ""}${g.hidden ? " is-hidden" : ""}${iVoted ? " my-vote" : ""}`}
                 style={{ "--i": i } as CSSProperties} // its place in the opening animation
-                onPointerMove={(e) => handlePointerMove(e, i)}
-                onPointerDown={(e) => (lastPointer.current = e.pointerType)}
-                onPointerLeave={cancelHover}
               >
-                {/* The cover: click = vote. A div acting as a button (not a <button>),
+                {/* The cover: click = select. A div acting as a button (not a <button>),
                   because it contains a real link (the game's name). */}
                 <div
                   role="button"
@@ -299,14 +261,8 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
                     e.preventDefault();
                     handleCardClick(i);
                   }}
-                  aria-pressed={onToggleVote && g.votes ? iVoted : i === index}
-                  aria-label={
-                    onToggleVote && g.votes
-                      ? `${iVoted ? "Remove your vote for" : "Vote for"} ${g.name}`
-                      : i === index
-                        ? `${g.name} (selected): unselect`
-                        : `Select ${g.name}`
-                  }
+                  aria-pressed={i === index}
+                  aria-label={i === index ? `Close ${g.name}` : `Open ${g.name}`}
                 >
                   <span className="fan-cover">
                     {g.image || g.thumbnail ? (
@@ -362,6 +318,10 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
                     title={votes.length ? `Votes: ${votes.join(", ")}` : "Vote for this game"}
                   >
                     <FontAwesomeIcon icon={faThumbsUp} aria-hidden />
+                    {/* slides out on hover */}
+                    <span className="vote-label" aria-hidden>
+                      {iVoted ? "Voted" : "Vote"}
+                    </span>
                     {votes.length > 0 && <span className="vote-count">{votes.length}</span>}
                   </button>
                 )}
@@ -400,7 +360,7 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
         {shown && onSetInterest && me && shown.interest && (
           <div className={`fan-rate${active ? "" : " is-placeholder"}`}>
             <div className="fan-rate-hint" aria-hidden={active ? true : undefined}>
-              <span className="hint-hover">Hover a game to rate your interest</span>
+              <span className="hint-hover">Select a game to rate your interest</span>
               <span className="hint-touch">Tap a game to rate your interest</span>
             </div>
             <div className="fan-rate-follow" ref={rateRef} aria-hidden={active ? undefined : true}>
