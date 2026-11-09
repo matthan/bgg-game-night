@@ -32,3 +32,12 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+    networks:
+      default:
+      proxy:
+        aliases:
+          - bgpicker
+
+networks:
+  proxy:
+    external: true
