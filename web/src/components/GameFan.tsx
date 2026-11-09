@@ -28,6 +28,8 @@ interface Props {
 
 const HOVER_DELAY_MS = 150; // hovering this long selects a card (sweeping across the fan doesn't)
 const FOLLOW_MS = 700; // the card animation (0.55s in GameFan.css) plus a little slack
+const FOLLOW_EASE = 0.16; // share of the remaining distance the slider/Hide move each frame (~0.4s glide)
+const VERTICAL_FAN = "(max-width: 1023px)"; // must match the phone section of GameFan.css
 
 const bggUrl = (id: number) => `https://boardgamegeek.com/boardgame/${id}`;
 
@@ -64,6 +66,8 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
   const rootRef = useRef<HTMLElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const titleRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const rateRef = useRef<HTMLDivElement>(null); // the interest slider's moving box
   const hoverTimer = useRef<ReturnType<typeof setTimeout>>();
   const hoverTarget = useRef<number | null>(null); // the card the hover timer will select
   const lastPointer = useRef<string>("mouse"); // "touch" taps select before they vote
@@ -89,34 +93,98 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
 
   useEffect(() => () => clearTimeout(hoverTimer.current), []);
 
-  // Keep the title centered under the selected card's cover (inside the fan's
-  // width). While the cards animate it's re-measured every frame, so the title
-  // glides along with its card instead of jumping when the animation ends.
-  // (Written straight to the element's style: no React re-render per frame.)
-  const placeTitle = useCallback(() => {
-    const root = rootRef.current;
-    const cover = index !== null ? cardRefs.current[index]?.querySelector(".fan-cover") : null;
-    const title = titleRef.current;
-    if (!root || !cover || !title) return;
-    const r = root.getBoundingClientRect();
-    const c = cover.getBoundingClientRect();
-    const w = title.offsetWidth;
-    const left = Math.max(0, Math.min(c.left + c.width / 2 - r.left - w / 2, r.width - w));
-    title.style.transform = `translateX(${left}px)`;
-  }, [index]);
+  // Keep the Hide button and the interest slider lined up with the selected
+  // card, but inside the card list:
+  // - Hide (admin): centered under the card
+  // - slider, desktop: centered under the card, within the row's width
+  // - slider, phones (vertical fan): beside the card, rotated, centered on it
+  //   vertically, within the column's height
+  // While the cards animate this runs every frame, so they glide along with
+  // the card. (Written straight to the elements' style: no React re-render.)
+  // Where the Hide button and the slider are now (px), so each frame can ease
+  // them a fraction of the way toward where they should be. That gives one
+  // smooth glide, even when the card they follow is itself moving.
+  const pos = useRef<{ title: number | null; rate: number | null; vertical: boolean | null }>({
+    title: null,
+    rate: null,
+    vertical: null,
+  });
+
+  /** Move the followers toward their targets; `snap` jumps straight there. Returns true once both have arrived. */
+  const placeTitle = useCallback(
+    (snap = false) => {
+      const root = rootRef.current;
+      const cards = cardsRef.current;
+      const cover = index !== null ? cardRefs.current[index]?.querySelector(".fan-cover") : null;
+      if (!root || !cards || !cover) return true;
+      const c = cover.getBoundingClientRect();
+      const list = cards.getBoundingClientRect();
+      const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, hi));
+      const vertical = window.matchMedia(VERTICAL_FAN).matches;
+      if (pos.current.vertical !== vertical) snap = true; // switched layouts (e.g. rotated a tablet)
+      pos.current.vertical = vertical;
+
+      // ease `key` toward `target`: a fixed share of the remaining distance per frame
+      const ease = (key: "title" | "rate", target: number) => {
+        const cur = pos.current[key];
+        let next = snap || cur === null ? target : cur + (target - cur) * FOLLOW_EASE;
+        if (Math.abs(target - next) < 0.5) next = target;
+        pos.current[key] = next;
+        return next;
+      };
+      let done = true;
+
+      const title = titleRef.current;
+      if (title) {
+        const r = root.getBoundingClientRect();
+        const w = title.offsetWidth;
+        const target = clamp(c.left + c.width / 2 - r.left - w / 2, 0, r.width - w);
+        const x = ease("title", target);
+        title.style.transform = `translateX(${x}px)`;
+        done &&= x === target;
+      }
+
+      const rate = rateRef.current;
+      const box = rate?.parentElement; // .fan-rate: the slider's lane
+      if (rate && box) {
+        const b = box.getBoundingClientRect();
+        if (vertical) {
+          const h = rate.offsetHeight;
+          const target = clamp(c.top + c.height / 2 - b.top - h / 2, list.top - b.top, list.bottom - b.top - h);
+          const y = ease("rate", target);
+          rate.style.transform = `translateY(${y}px)`;
+          done &&= y === target;
+        } else {
+          const w = rate.offsetWidth;
+          const target = clamp(c.left + c.width / 2 - b.left - w / 2, list.left - b.left, list.right - b.left - w);
+          const x = ease("rate", target);
+          rate.style.transform = `translateX(${x}px)`;
+          done &&= x === target;
+        }
+      }
+      return done;
+    },
+    [index],
+  );
+
+  // When nothing was selected, the followers were invisible: put them straight
+  // in place (they fade in there) instead of gliding from wherever they were.
+  const wasVisible = useRef(false);
 
   useLayoutEffect(() => {
     let frame = 0;
-    const until = performance.now() + FOLLOW_MS;
-    const follow = () => {
-      placeTitle();
-      if (performance.now() < until) frame = requestAnimationFrame(follow);
+    const until = performance.now() + FOLLOW_MS; // the card is still moving until then
+    const follow = (snap = false) => {
+      const arrived = placeTitle(snap || window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      if (performance.now() < until || !arrived) frame = requestAnimationFrame(() => follow());
     };
-    follow();
-    window.addEventListener("resize", placeTitle);
+    follow(!wasVisible.current);
+    wasVisible.current = active !== null;
+    const onResize = () => placeTitle(true);
+    window.addEventListener("resize", onResize);
     return () => {
       cancelAnimationFrame(frame);
-      window.removeEventListener("resize", placeTitle);
+      window.removeEventListener("resize", onResize);
     };
   }, [placeTitle, active?.id, active?.votes?.length]);
 
@@ -156,149 +224,151 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
 
   // Arrow keys move the selection along the fan.
   function handleKeyDown(e: KeyboardEvent) {
-    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    // ← → on the desktop fan, ↑ ↓ on the vertical (phone) fan
+    if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"].includes(e.key)) return;
     e.preventDefault();
-    const step = e.key === "ArrowRight" ? 1 : -1;
+    const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
     setSelected(((index ?? (step > 0 ? -1 : 0)) + step + games.length) % games.length);
   }
 
   return (
     <section id="carousel" className="fan" aria-label="Game list" ref={rootRef}>
-      <div className={`fan-cards${index !== null ? " has-selection" : ""}`} onKeyDown={handleKeyDown}>
-        {games.map((g, i) => {
-          const votes = g.votes ?? [];
-          const iVoted = !!me && votes.includes(me);
-          return (
-            <div
-              key={g.id}
-              ref={(el) => {
-                cardRefs.current[i] = el;
-              }}
-              className={`fan-card${i === index ? " selected" : ""}${g.hidden ? " is-hidden" : ""}${iVoted ? " my-vote" : ""}`}
-              onPointerMove={(e) => handlePointerMove(e, i)}
-              onPointerDown={(e) => (lastPointer.current = e.pointerType)}
-              onPointerLeave={cancelHover}
-            >
-              {/* The cover: click = vote. A div acting as a button (not a <button>),
-                  because it contains a real link (the game's name). */}
+      <div className="fan-body">
+        <div ref={cardsRef} className={`fan-cards${index !== null ? " has-selection" : ""}`} onKeyDown={handleKeyDown}>
+          {games.map((g, i) => {
+            const votes = g.votes ?? [];
+            const iVoted = !!me && votes.includes(me);
+            return (
               <div
-                role="button"
-                tabIndex={0}
-                className="fan-select"
-                onClick={() => handleCardClick(i)}
-                onKeyDown={(e) => {
-                  if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
-                  e.preventDefault();
-                  handleCardClick(i);
+                key={g.id}
+                ref={(el) => {
+                  cardRefs.current[i] = el;
                 }}
-                aria-pressed={onToggleVote && g.votes ? iVoted : i === index}
-                aria-label={
-                  onToggleVote && g.votes
-                    ? `${iVoted ? "Remove your vote for" : "Vote for"} ${g.name}`
-                    : i === index
-                      ? `${g.name} (selected): unselect`
-                      : `Select ${g.name}`
-                }
+                className={`fan-card${i === index ? " selected" : ""}${g.hidden ? " is-hidden" : ""}${iVoted ? " my-vote" : ""}`}
+                onPointerMove={(e) => handlePointerMove(e, i)}
+                onPointerDown={(e) => (lastPointer.current = e.pointerType)}
+                onPointerLeave={cancelHover}
               >
-                <span className="fan-cover">
-                  {g.image || g.thumbnail ? (
-                    <img src={g.image ?? g.thumbnail ?? ""} alt="" draggable={false} />
-                  ) : (
-                    <span className="fan-placeholder" aria-hidden>
-                      🎲
-                    </span>
-                  )}
-                  {/* name (links to BGG), then players (best with) · everyone's interest */}
-                  <span className="fan-caption">
-                    <a
-                      className="fan-name"
-                      href={bggUrl(g.id)}
-                      target="_blank"
-                      rel="noreferrer"
-                      tabIndex={i === index ? 0 : -1} // reachable by keyboard on the selected card
-                      onClick={(e) => e.stopPropagation()} // opening the link isn't a vote
-                      onKeyDown={(e) => e.stopPropagation()}
-                    >
-                      {g.name}
-                      <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="external-icon" aria-hidden />
-                      <span className="visually-hidden"> (opens BoardGameGeek in a new tab)</span>
-                    </a>
-                    <span className="fan-meta">
-                      <span className="fan-stats">👥 {formatPlayersAndBest(g)}</span>
-                      {/* everyone's interest at a glance, keenest first */}
-                      {(g.interest?.filter((it) => showInInterest(it.username)).length ?? 0) > 0 && (
-                        <span className="fan-interest" aria-hidden>
-                          {g
-                            .interest!.filter((it) => showInInterest(it.username))
-                            .map((it) => (
-                              <Die
-                                key={it.username}
-                                icon={interestInfo(it.level).icon}
-                                color={interestInfo(it.level).color}
-                                title={`${it.username}: ${interestInfo(it.level).label}`}
-                              />
-                            ))}
-                        </span>
-                      )}
-                    </span>
-                  </span>
-                </span>
-              </div>
-              {onToggleVote && g.votes && (
-                <button
-                  type="button"
-                  className={`vote-button${iVoted ? " voted" : ""}${votes.length > 0 ? " has-votes" : ""}`}
-                  onClick={() => onToggleVote(g as ListGame)}
-                  aria-pressed={iVoted}
-                  aria-label={`${iVoted ? "Remove your vote for" : "Vote for"} ${g.name} (${votes.length} vote${votes.length === 1 ? "" : "s"})`}
-                  title={votes.length ? `Votes: ${votes.join(", ")}` : "Vote for this game"}
-                >
-                  <FontAwesomeIcon icon={faThumbsUp} aria-hidden />
-                  {votes.length > 0 && <span className="vote-count">{votes.length}</span>}
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Under the selected card: the Hide button (admin) and the interest slider.
-          With nothing selected, the first game's is rendered INVISIBLY, so the
-          space is always reserved and the page below doesn't jump on hover. */}
-      <div
-        className={`carousel-active fan-info${active ? "" : " is-placeholder"}`}
-        aria-live="polite"
-        aria-hidden={active ? undefined : true}
-      >
-        {shown && (
-          <>
-            {/* admin only: Hide, centered under the selected card */}
-            {onToggleHidden && (
-              <div className="fan-title" ref={titleRef}>
-                <button
-                  type="button"
-                  className="hide-button"
-                  onClick={() => onToggleHidden(shown)}
-                  aria-label={`${shown.hidden ? "Show" : "Hide"} ${shown.name} ${shown.hidden ? "in" : "from"} the results`}
-                  title={
-                    shown.hidden
-                      ? "Show this game in the results again"
-                      : "Hide this game from the results (kept in the database)"
+                {/* The cover: click = vote. A div acting as a button (not a <button>),
+                  because it contains a real link (the game's name). */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className="fan-select"
+                  onClick={() => handleCardClick(i)}
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+                    e.preventDefault();
+                    handleCardClick(i);
+                  }}
+                  aria-pressed={onToggleVote && g.votes ? iVoted : i === index}
+                  aria-label={
+                    onToggleVote && g.votes
+                      ? `${iVoted ? "Remove your vote for" : "Vote for"} ${g.name}`
+                      : i === index
+                        ? `${g.name} (selected): unselect`
+                        : `Select ${g.name}`
                   }
                 >
-                  {shown.hidden ? "Unhide" : "Hide"}
-                </button>
+                  <span className="fan-cover">
+                    {g.image || g.thumbnail ? (
+                      <img src={g.image ?? g.thumbnail ?? ""} alt="" draggable={false} />
+                    ) : (
+                      <span className="fan-placeholder" aria-hidden>
+                        🎲
+                      </span>
+                    )}
+                    {/* name (links to BGG), then players (best with) · everyone's interest */}
+                    <span className="fan-caption">
+                      <a
+                        className="fan-name"
+                        href={bggUrl(g.id)}
+                        target="_blank"
+                        rel="noreferrer"
+                        tabIndex={i === index ? 0 : -1} // reachable by keyboard on the selected card
+                        onClick={(e) => e.stopPropagation()} // opening the link isn't a vote
+                        onKeyDown={(e) => e.stopPropagation()}
+                      >
+                        {g.name}
+                        <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="external-icon" aria-hidden />
+                        <span className="visually-hidden"> (opens BoardGameGeek in a new tab)</span>
+                      </a>
+                      <span className="fan-meta">
+                        <span className="fan-stats">👥 {formatPlayersAndBest(g)}</span>
+                        {/* everyone's interest at a glance, keenest first */}
+                        {(g.interest?.filter((it) => showInInterest(it.username)).length ?? 0) > 0 && (
+                          <span className="fan-interest" aria-hidden>
+                            {g
+                              .interest!.filter((it) => showInInterest(it.username))
+                              .map((it) => (
+                                <Die
+                                  key={it.username}
+                                  icon={interestInfo(it.level).icon}
+                                  color={interestInfo(it.level).color}
+                                  title={`${it.username}: ${interestInfo(it.level).label}`}
+                                />
+                              ))}
+                          </span>
+                        )}
+                      </span>
+                    </span>
+                  </span>
+                </div>
+                {onToggleVote && g.votes && (
+                  <button
+                    type="button"
+                    className={`vote-button${iVoted ? " voted" : ""}${votes.length > 0 ? " has-votes" : ""}`}
+                    onClick={() => onToggleVote(g as ListGame)}
+                    aria-pressed={iVoted}
+                    aria-label={`${iVoted ? "Remove your vote for" : "Vote for"} ${g.name} (${votes.length} vote${votes.length === 1 ? "" : "s"})`}
+                    title={votes.length ? `Votes: ${votes.join(", ")}` : "Vote for this game"}
+                  >
+                    <FontAwesomeIcon icon={faThumbsUp} aria-hidden />
+                    {votes.length > 0 && <span className="vote-count">{votes.length}</span>}
+                  </button>
+                )}
               </div>
-            )}
-            {onSetInterest && me && shown.interest && (
+            );
+          })}
+        </div>
+
+        {/* Under the selected card: the Hide button (admin only).
+          With nothing selected, the first game's is rendered INVISIBLY, so the
+          space is always reserved and the page below doesn't jump on hover. */}
+        {shown && onToggleHidden && (
+          <div className={`fan-info${active ? "" : " is-placeholder"}`} aria-hidden={active ? undefined : true}>
+            <div className="fan-title" ref={titleRef}>
+              <button
+                type="button"
+                className="hide-button"
+                onClick={() => onToggleHidden(shown)}
+                aria-label={`${shown.hidden ? "Show" : "Hide"} ${shown.name} ${shown.hidden ? "in" : "from"} the results`}
+                title={
+                  shown.hidden
+                    ? "Show this game in the results again"
+                    : "Hide this game from the results (kept in the database)"
+                }
+              >
+                {shown.hidden ? "Unhide" : "Hide"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* The interest slider: under the fan on desktop, beside it (rotated) on
+          phones; lined up with the selected card (see placeTitle). Invisible
+          but still taking its space when nothing is selected. */}
+        {shown && onSetInterest && me && shown.interest && (
+          <div className={`fan-rate${active ? "" : " is-placeholder"}`} aria-hidden={active ? undefined : true}>
+            <div className="fan-rate-follow" ref={rateRef}>
               <InterestPanel
                 key={shown.id} // a fresh slider for each game
                 game={shown as ListGame}
                 me={me}
                 onSetInterest={onSetInterest}
               />
-            )}
-          </>
+            </div>
+          </div>
         )}
       </div>
     </section>

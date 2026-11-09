@@ -33,8 +33,9 @@
   flex: 0 0 auto;
   width: var(--slot);
   height: var(--cover-h);
-  transition: width var(--fan-speed) var(--fan-ease), scale var(--fan-speed) var(--fan-ease),
-    translate var(--fan-speed) var(--fan-ease), filter var(--fan-speed) var(--fan-ease);
+  transition: width var(--fan-speed) var(--fan-ease), height var(--fan-speed) var(--fan-ease),
+    scale var(--fan-speed) var(--fan-ease), translate var(--fan-speed) var(--fan-ease),
+    filter var(--fan-speed) var(--fan-ease);
 }
 /* cards YOU voted for sit higher than the rest (selected or not) */
 .fan-card.my-vote { translate: 0 -42px; }
@@ -127,7 +128,7 @@
   transform: rotateY(0);
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 }
-.fan-cards.has-selection .fan-card:not(.selected) { filter: blur(3px) brightness(0.85); }
+.fan-cards.has-selection .fan-card:not(.selected) { filter: blur(3px) brightness(0.75); } /* blurred and darker */
 
 .fan-card.is-hidden img { filter: grayscale(1) brightness(0.6); }
 
@@ -170,34 +171,105 @@
 
 
 .fan-info { margin-top: 4px; min-height: 1.6em; }
-/* nothing selected: the info area keeps its size but shows nothing */
-.fan-info.is-placeholder { visibility: hidden; }
+/* nothing selected: these keep their size but show nothing */
+.fan-info,
+.fan-rate { transition: opacity 0.35s ease, visibility 0.35s; }
+.fan-info.is-placeholder,
+.fan-rate.is-placeholder { opacity: 0; visibility: hidden; } /* fades in when a card is selected */
+
+/* the interest slider's lane under the fan; .fan-rate-follow slides along it
+   to sit under the selected card (GameFan sets the transform) */
+.fan-rate { position: relative; margin-top: 14px; }
+.fan-rate-follow { width: max-content; max-width: 100%; will-change: transform; } /* moved (and eased) by GameFan.tsx */
 /* Hide button (admin): centered under the selected card (GameFan sets the translateX) */
 .fan-title {
   width: max-content;
   max-width: 100%;
   text-align: center;
-  transition: transform 0.12s linear; /* smooths the per-frame follow (GameFan.tsx) */
+  will-change: transform; /* moved (and eased) by GameFan.tsx */
 }
 /* the small "opens in a new tab" icon after the game's name */
 .external-icon { margin-left: 6px; font-size: 0.55em; vertical-align: 0.25em; opacity: 0.7; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: inset(50%); white-space: nowrap; }
 
-/* smaller screens: smaller cards; on phones the row scrolls sideways */
-@media (max-width: 1000px) {
-  .fan { --slot: 92px; --slot-open: 136px; --cover-w: 168px; --cover-h: 228px; }
-  .fan-caption { padding: 1.5rem 0.6rem 0.6rem; }
-  .fan-name { font-size: 18px; }
-  .fan-stats { font-size: 10px; }
-}
-@media (max-width: 640px) {
-  .fan-cards {
-    justify-content: flex-start;
-    overflow-x: auto;
-    padding: 42px var(--slot) 0 16px; /* room above for raised (voted) cards */
-    scrollbar-width: none;
+/*
+ * Phones and tablets (under 1024px): the fan runs DOWN the page instead of
+ * across. Each card shows a strip of its cover's top (box art titles are
+ * usually there), tilted back, with the next card overlapping the rest.
+ * - selected: the card straightens and opens to its full (shorter) height
+ * - voted for: the card slides to the right
+ * The total height never changes (the space a selected card takes is the
+ * space the last card's overhang used), so the page below doesn't jump.
+ */
+@media (max-width: 1023px) {
+  .fan {
+    --row: 76px;        /* visible strip of each card */
+    --cover-h: 210px;   /* a card's full height (shorter than on desktop) */
+    --shift: 40px;      /* how far a voted card slides right */
+    --rail: 64px;       /* width of the interest slider's column, right of the cards */
+    --rate-len: 600px;  /* length of the (rotated) slider */
+    margin-top: 12px;
   }
+  /* cards on the left, the slider's column on the right, Hide under the cards */
+  .fan-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--rail);
+    column-gap: 8px;
+    align-items: start;
+    max-width: 660px;
+    margin: 0 auto;
+  }
+  .fan-info { grid-column: 1; grid-row: 2; }
+  .fan-rate { grid-column: 2; grid-row: 1; align-self: stretch; margin: 0; }
+  /* the slider, turned 90° (no opinion at the top), sliding up and down */
+  .fan-rate-follow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--rail);
+    height: var(--rate-len);
+    max-width: none;
+  }
+  .fan-cards {
+    grid-column: 1;
+    grid-row: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 6px;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    /* the last card's cover hangs below its strip */
+    padding: 0 0 calc(var(--cover-h) - var(--row));
+    transition: padding var(--fan-speed) var(--fan-ease);
+  }
+  .fan-cards.has-selection { padding-bottom: 0; } /* ...unless a card is open */
+
+  .fan-card { width: calc(100% - var(--shift)); height: var(--row); }
+  .fan-card.my-vote { translate: var(--shift) 0; }
+  .fan-select { perspective: 900px; }
+  .fan-cover {
+    width: 100%;
+    height: var(--cover-h);
+    border-radius: 16px;
+    transform: rotateX(-28deg);
+    transform-origin: center top;
+    box-shadow: 0 -10px 18px rgba(0, 0, 0, 0.45);
+  }
+  .fan-cover img { object-position: top; } /* keep the top of the box art in view */
+
+  .fan-card.selected { width: calc(100% - var(--shift)); height: var(--cover-h); scale: 1; }
+  .fan-card.selected .fan-cover { transform: rotateX(0); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); }
+  .fan-card.selected .vote-button { right: 10px; }
+
+  .fan-caption { padding: 1.8rem 0.8rem 0.7rem; transition: opacity var(--fan-speed) var(--fan-ease); }
+  /* only the open card shows its name/players/dice: on the others that part is
+     covered by the next card anyway, and a voted card sliding right would
+     otherwise uncover half a caption on the card above it */
+  .fan-card:not(.selected) .fan-caption { opacity: 0; }
+  .fan-name { font-size: 22px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .fan-card, .fan-cover, .vote-button, .fan-title { transition: none; }
+  .fan-card, .fan-cover, .vote-button, .fan-info, .fan-rate { transition: none; }
 }

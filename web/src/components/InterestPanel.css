@@ -1,8 +1,9 @@
 /* "Rate your interest" slider, shown under the selected game. */
 .interest-panel {
   box-sizing: border-box;
-  width: min(820px, 100%);
-  margin: 18px auto 0;
+  width: max-content; /* GameFan slides it to line up with the selected card */
+  max-width: 100%;
+  margin: 0;
   padding: 10px 20px 10px 30px;
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.15);
@@ -49,7 +50,7 @@
 /* track: a thick black line + dice at each stop, with the (transparent) range input on top */
 .interest-track {
   position: relative;
-  flex: 1 1 auto;
+  flex: 0 1 420px;
   min-width: 260px;
   height: var(--track-h);
 }
@@ -116,8 +117,28 @@
 .interest-slider:focus-visible::-webkit-slider-thumb { filter: drop-shadow(0 0 6px var(--accent)); }
 .interest-slider:focus-visible::-moz-range-thumb { filter: drop-shadow(0 0 6px var(--accent)); }
 
-@media (max-width: 700px) {
-  .interest-rate { flex-wrap: wrap; justify-content: center; }
-  .interest-track { order: 3; flex-basis: 100%; }
-  .interest-rate-output { flex-basis: auto; }
+/* Phones (vertical fan): the whole panel is turned 90° clockwise and sits in
+   the narrow column right of the cards: label at the top, then the slider
+   (no opinion first), then the chosen level. Sizes are trimmed to fit. */
+@media (max-width: 1023px) {
+  .interest-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--rate-len, 600px);
+    height: var(--rail, 64px);
+    max-width: none;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    transform-origin: top left;
+    transform: translateX(var(--rail, 64px)) rotate(90deg);
+  }
+  .interest-rate { --handle: 42px; --tick: 18px; --track-h: 46px; gap: 12px; }
+  .interest-rate-heading { font-size: 10px; }
+  .interest-rate-output { flex-basis: 140px; font-size: 24px; }
+  .interest-track { flex: 1 1 auto; min-width: 0; }
+  .interest-line { height: 6px; }
+  /* dragging along the (now vertical) slider mustn't scroll the page */
+  .interest-slider { touch-action: none; }
 }

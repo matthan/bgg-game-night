@@ -78,7 +78,14 @@ in the list is filled with another random game that fits the list's filters
 **Browsing the list:** rest the mouse on a card to select it (it turns to face
 you and the others blur); it stays selected while you move down to its
 and interest slider. Click elsewhere or press Escape to go back to the fan.
-On touch screens, tap a card to select it. The game's name on the card links to BoardGameGeek (clicking it doesn't vote). Who made the list
+On touch screens, tap a card to select it.
+On screens narrower than 1024px (phones, tablets) the fan runs down the page:
+each card shows the top of its box art, the selected card opens to full
+height, and cards you voted for slide to the right. The interest slider sits in
+a column to the right of the cards, turned on its side.
+
+The interest slider always lines up with the selected card (centered under it
+on desktop, beside it on phones) without going past the ends of the list. The game's name on the card links to BoardGameGeek (clicking it doesn't vote). Who made the list
 and when is kept in the page's `<meta name="game-list">` tag.
 
 **Voting:** everyone signed in can vote for any games in the current list
