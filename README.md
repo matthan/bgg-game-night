@@ -66,7 +66,9 @@ same username lock it out for a while.
 Nothing is picked automatically. The admin (matthan) sets the filters and clicks
 **Create game list**: 7 random games that match are saved as the current list
 (`game_lists` table), together with the filters used. Everyone sees that list
-and those filters (read-only) until the admin creates a new one. Older lists
+until the admin creates a new one. The filters, the Create button and the
+collections section are only shown to the admin; everyone else just sees the
+game list. Older lists
 are kept as history.
 
 When the admin **hides** a game, it leaves the results everywhere and its spot
@@ -74,16 +76,16 @@ in the list is filled with another random game that fits the list's filters
 (Undo puts it back).
 
 **Browsing the list:** rest the mouse on a card to select it (it turns to face
-you and the others blur); it stays selected while you move down to its title
+you and the others blur); it stays selected while you move down to its
 and interest slider. Click elsewhere or press Escape to go back to the fan.
-On touch screens, tap a card to select it. The title under the card links to BoardGameGeek. Who made the list
+On touch screens, tap a card to select it. The game's name on the card links to BoardGameGeek (clicking it doesn't vote). Who made the list
 and when is kept in the page's `<meta name="game-list">` tag.
 
 **Voting:** everyone signed in can vote for any games in the current list
 (one vote per game): click the card (on touch screens, tap it again once
 selected) or its 👍 button; click again to take the vote back. Cards you voted
-for sit a little higher than the rest. Each card shows the vote count and a colored badge per
-voter. Votes belong to the list: creating a new list erases them, and a hidden
+for sit a little higher than the rest. Each card's 👍 button shows the vote
+count (hover it to see who). Votes belong to the list: creating a new list erases them, and a hidden
 game's votes go with it. Pages re-check the list every 15 seconds.
 
 ## Interest levels

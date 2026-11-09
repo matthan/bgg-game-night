@@ -9,7 +9,7 @@ import {
 } from "react";
 import type { InterestLevel, ListGame, OwnedGame } from "../types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faThumbsUp } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUpRightFromSquare, faThumbsUp } from "@fortawesome/free-solid-svg-icons";
 import { interestInfo, showInInterest } from "../interest";
 import { InterestPanel } from "./InterestPanel";
 import { formatCounts } from "../filterGames";
@@ -18,7 +18,7 @@ import "./GameFan.css";
 
 interface Props {
   games: (OwnedGame & Partial<Pick<ListGame, "votes" | "interest">>)[];
-  showOwners?: boolean;
+  showOwners?: boolean; // (not shown by the fan any more)
   onToggleHidden?: (game: OwnedGame) => void; // Hide / Unhide button (admin only)
   me?: string; // signed-in username, to show whether *you* voted
   onToggleVote?: (game: ListGame) => void; // vote button on each card
@@ -26,16 +26,8 @@ interface Props {
   onSetInterest?: (game: ListGame, level: InterestLevel | null) => void;
 }
 
-const MAX_VOTER_BADGES = 6;
 const HOVER_DELAY_MS = 150; // hovering this long selects a card (sweeping across the fan doesn't)
 const FOLLOW_MS = 700; // the card animation (0.55s in GameFan.css) plus a little slack
-
-/** A stable color per username, so each person's vote badge is recognisable. */
-function voterColor(name: string) {
-  let h = 0;
-  for (const ch of name.toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) % 360;
-  return `hsl(${h}, 65%, 45%)`;
-}
 
 const bggUrl = (id: number) => `https://boardgamegeek.com/boardgame/${id}`;
 
@@ -44,11 +36,9 @@ function formatPlayers(g: OwnedGame) {
   return g.minPlayers === g.maxPlayers ? `${g.minPlayers}` : `${g.minPlayers}–${g.maxPlayers}`;
 }
 
-function formatTime(g: OwnedGame) {
-  if (g.minPlayTime && g.maxPlayTime && g.minPlayTime !== g.maxPlayTime) {
-    return `${g.minPlayTime}–${g.maxPlayTime}m`;
-  }
-  return g.playingTime ? `${g.playingTime}m` : "?";
+/** "2–5 (3)": player count, then the counts BGG voters say are best, in brackets. */
+function formatPlayersAndBest(g: OwnedGame) {
+  return g.bestWith.length ? `${formatPlayers(g)} (${formatCounts(g.bestWith)})` : formatPlayers(g);
 }
 
 /**
@@ -69,7 +59,7 @@ function formatTime(g: OwnedGame) {
  * The selection is stored by POSITION, so when a game is hidden and another
  * fills its spot, the new game is selected in its place.
  */
-export function GameFan({ games, showOwners = false, onToggleHidden, me, onToggleVote, onSetInterest }: Props) {
+export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   const rootRef = useRef<HTMLElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -189,10 +179,18 @@ export function GameFan({ games, showOwners = false, onToggleHidden, me, onToggl
               onPointerDown={(e) => (lastPointer.current = e.pointerType)}
               onPointerLeave={cancelHover}
             >
-              <button
-                type="button"
+              {/* The cover: click = vote. A div acting as a button (not a <button>),
+                  because it contains a real link (the game's name). */}
+              <div
+                role="button"
+                tabIndex={0}
                 className="fan-select"
                 onClick={() => handleCardClick(i)}
+                onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+                  e.preventDefault();
+                  handleCardClick(i);
+                }}
                 aria-pressed={onToggleVote && g.votes ? iVoted : i === index}
                 aria-label={
                   onToggleVote && g.votes
@@ -203,19 +201,6 @@ export function GameFan({ games, showOwners = false, onToggleHidden, me, onToggl
                 }
               >
                 <span className="fan-cover">
-                  {/* who voted: one colored badge per person */}
-                  {votes.length > 0 && (
-                    <span className="fan-voters" aria-hidden>
-                      {votes.slice(0, MAX_VOTER_BADGES).map((v) => (
-                        <span key={v} className="voter-badge" style={{ background: voterColor(v) }} title={v}>
-                          {v[0].toUpperCase()}
-                        </span>
-                      ))}
-                      {votes.length > MAX_VOTER_BADGES && (
-                        <span className="voter-badge more">+{votes.length - MAX_VOTER_BADGES}</span>
-                      )}
-                    </span>
-                  )}
                   {g.image || g.thumbnail ? (
                     <img src={g.image ?? g.thumbnail ?? ""} alt="" draggable={false} />
                   ) : (
@@ -223,32 +208,42 @@ export function GameFan({ games, showOwners = false, onToggleHidden, me, onToggl
                       🎲
                     </span>
                   )}
-                  {/* same details the slideshow cards showed */}
+                  {/* name (links to BGG), then players (best with) · everyone's interest */}
                   <span className="fan-caption">
-                    {/* everyone's interest at a glance, keenest first */}
-                    {(g.interest?.filter((it) => showInInterest(it.username)).length ?? 0) > 0 && (
-                      <span className="fan-interest" aria-hidden>
-                        {g
-                          .interest!.filter((it) => showInInterest(it.username))
-                          .map((it) => (
-                            <Die
-                              key={it.username}
-                              icon={interestInfo(it.level).icon}
-                              color={interestInfo(it.level).color}
-                              title={`${it.username}: ${interestInfo(it.level).label}`}
-                            />
-                          ))}
-                      </span>
-                    )}
-                    <span className="fan-name">{g.name}</span>
-                    <span className="fan-stats">
-                      👥 {formatPlayers(g)} · ⏱ {formatTime(g)}
-                      {g.weight ? ` · ⚖ ${g.weight.toFixed(1)}` : ""}
-                      {g.bggRating ? ` · ⭐ ${g.bggRating.toFixed(1)}` : ""}
+                    <a
+                      className="fan-name"
+                      href={bggUrl(g.id)}
+                      target="_blank"
+                      rel="noreferrer"
+                      tabIndex={i === index ? 0 : -1} // reachable by keyboard on the selected card
+                      onClick={(e) => e.stopPropagation()} // opening the link isn't a vote
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      {g.name}
+                      <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="external-icon" aria-hidden />
+                      <span className="visually-hidden"> (opens BoardGameGeek in a new tab)</span>
+                    </a>
+                    <span className="fan-meta">
+                      <span className="fan-stats">👥 {formatPlayersAndBest(g)}</span>
+                      {/* everyone's interest at a glance, keenest first */}
+                      {(g.interest?.filter((it) => showInInterest(it.username)).length ?? 0) > 0 && (
+                        <span className="fan-interest" aria-hidden>
+                          {g
+                            .interest!.filter((it) => showInInterest(it.username))
+                            .map((it) => (
+                              <Die
+                                key={it.username}
+                                icon={interestInfo(it.level).icon}
+                                color={interestInfo(it.level).color}
+                                title={`${it.username}: ${interestInfo(it.level).label}`}
+                              />
+                            ))}
+                        </span>
+                      )}
                     </span>
                   </span>
                 </span>
-              </button>
+              </div>
               {onToggleVote && g.votes && (
                 <button
                   type="button"
@@ -267,7 +262,7 @@ export function GameFan({ games, showOwners = false, onToggleHidden, me, onToggl
         })}
       </div>
 
-      {/* Title line + interest slider for the selected game, centered under its card.
+      {/* Under the selected card: the Hide button (admin) and the interest slider.
           With nothing selected, the first game's is rendered INVISIBLY, so the
           space is always reserved and the page below doesn't jump on hover. */}
       <div
@@ -277,18 +272,9 @@ export function GameFan({ games, showOwners = false, onToggleHidden, me, onToggl
       >
         {shown && (
           <>
-            <div className="fan-title" ref={titleRef}>
-              <a href={bggUrl(shown.id)} target="_blank" rel="noreferrer">
-                {shown.name}
-                {shown.yearPublished ? ` (${shown.yearPublished})` : ""}
-              </a>
-              <span className="muted">
-                {shown.bestWith.length ? ` · Best with ${formatCounts(shown.bestWith)}` : ""}
-              </span>
-              {shown.votes && shown.votes.length > 0 && (
-                <span className="muted"> · Votes: {shown.votes.join(", ")}</span>
-              )}
-              {onToggleHidden && (
+            {/* admin only: Hide, centered under the selected card */}
+            {onToggleHidden && (
+              <div className="fan-title" ref={titleRef}>
                 <button
                   type="button"
                   className="hide-button"
@@ -302,9 +288,8 @@ export function GameFan({ games, showOwners = false, onToggleHidden, me, onToggl
                 >
                   {shown.hidden ? "Unhide" : "Hide"}
                 </button>
-              )}
-              {showOwners && <p className="owners">Owned by {shown.owners.join(", ")}</p>}
-            </div>
+              </div>
+            )}
             {onSetInterest && me && shown.interest && (
               <InterestPanel
                 key={shown.id} // a fresh slider for each game

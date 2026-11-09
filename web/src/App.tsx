@@ -356,7 +356,7 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
       <header id="site-header" className="site-header">
         <p className="eyebrow">Boardroom Game Night</p>
         <h1>Board Game Picker</h1>
-        <p className="muted">Seven games enter. One hits the table. Cast your vote!</p>
+        <p className="muted">Game night approaches. What are you excited to play?</p>
       </header>
 
       {/* 3–4. the shared game list */}
@@ -391,63 +391,69 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
         </>
       )}
 
-      {/* 5–6. filters + create button (only the admin can change them) */}
-      {loaded.length > 0 && (
-        <>
-          <Filters value={filters} onChange={handleFiltersChange} disabled={!isAdmin} />
-          {isAdmin && (
-            <div id="list-actions" className="list-actions">
-              <button type="button" className="create-list-button" onClick={handleCreateList} disabled={creating}>
-                {creating ? "Creating…" : list ? "Create new game list" : "Create game list"}
-              </button>
-              <span className="muted">
-                {matches.length} game{matches.length === 1 ? "" : "s"} match
-                {filtersChanged && " · filters changed since the current list"}
-              </span>
-            </div>
-          )}
-          {listError && <p className="status error">⚠️ {listError}</p>}
-        </>
-      )}
+      {/* Errors from votes, interest or making a list: everyone sees these. */}
+      {listError && <p className="status error">⚠️ {listError}</p>}
 
-      {/* 7. collections */}
-      {savedUsernames === null ? (
-        <p className="muted">Loading saved collections…</p>
-      ) : (
-        <CollectionsBar
-          usernames={usernames}
-          entries={entries}
-          onAdd={handleAdd}
-          onRemove={handleRemove}
-          onRefresh={refresh}
-        />
-      )}
-      {anyLoading && <p className="status">Loading collections… (BGG can be slow the first time)</p>}
-      {errors.map(({ name, entry }) => (
-        <p key={name} className="status error">
-          ⚠️ {name}: {entry.error}
-        </p>
-      ))}
-      {savedUsernames?.length === 0 && <p className="muted">No collections yet. Add one to get started.</p>}
-
-      {/* 8. collection summary */}
-      {loaded.length > 0 && (
+      {/* 5–8. admin only (matthan): filters, Create game list, collections, summary.
+          Everyone else just sees the game list above. */}
+      {isAdmin && (
         <>
-          <p id="collection-summary" className="muted">
-            {allGames.length - hiddenCount} games across {loaded.length} collection{loaded.length > 1 ? "s" : ""}
-            {isAdmin && hiddenCount > 0 && (
-              <>
-                {" "}· {hiddenCount} hidden ·{" "}
-                <button type="button" className="text-button" onClick={() => setShowHidden((s) => !s)}>
-                  {showHidden ? "leave them out of new lists" : "allow them in new lists"}
+          {/* 5–6. filters + create button */}
+          {loaded.length > 0 && (
+            <>
+              <Filters value={filters} onChange={handleFiltersChange} />
+              <div id="list-actions" className="list-actions">
+                <button type="button" className="create-list-button" onClick={handleCreateList} disabled={creating}>
+                  {creating ? "Creating…" : list ? "Create new game list" : "Create game list"}
                 </button>
-              </>
-            )}
-          </p>
-          {isMock && (
-            <p id="mock-banner" className="banner">
-              Mock mode: showing sample games. Add your BGG token to <code>.env</code> for real data.
+                <span className="muted">
+                  {matches.length} game{matches.length === 1 ? "" : "s"} match
+                  {filtersChanged && " · filters changed since the current list"}
+                </span>
+              </div>
+            </>
+          )}
+
+          {/* 7. collections */}
+          {savedUsernames === null ? (
+            <p className="muted">Loading saved collections…</p>
+          ) : (
+            <CollectionsBar
+              usernames={usernames}
+              entries={entries}
+              onAdd={handleAdd}
+              onRemove={handleRemove}
+              onRefresh={refresh}
+            />
+          )}
+          {anyLoading && <p className="status">Loading collections… (BGG can be slow the first time)</p>}
+          {errors.map(({ name, entry }) => (
+            <p key={name} className="status error">
+              ⚠️ {name}: {entry.error}
             </p>
+          ))}
+          {savedUsernames?.length === 0 && <p className="muted">No collections yet. Add one to get started.</p>}
+
+          {/* 8. collection summary */}
+          {loaded.length > 0 && (
+            <>
+              <p id="collection-summary" className="muted">
+                {allGames.length - hiddenCount} games across {loaded.length} collection{loaded.length > 1 ? "s" : ""}
+                {hiddenCount > 0 && (
+                  <>
+                    {" "}· {hiddenCount} hidden ·{" "}
+                    <button type="button" className="text-button" onClick={() => setShowHidden((s) => !s)}>
+                      {showHidden ? "leave them out of new lists" : "allow them in new lists"}
+                    </button>
+                  </>
+                )}
+              </p>
+              {isMock && (
+                <p id="mock-banner" className="banner">
+                  Mock mode: showing sample games. Add your BGG token to <code>.env</code> for real data.
+                </p>
+              )}
+            </>
           )}
         </>
       )}

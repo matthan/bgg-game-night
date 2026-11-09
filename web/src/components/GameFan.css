@@ -38,7 +38,7 @@
 }
 /* cards YOU voted for sit higher than the rest (selected or not) */
 .fan-card.my-vote { translate: 0 -42px; }
-/* the cover is a <button> (click = vote); drop the button look */
+/* the cover acts as a button (click = vote); no button look */
 .fan-select {
   all: unset;
   position: absolute;
@@ -86,16 +86,27 @@
   background: linear-gradient(to top, rgba(10, 5, 15, 0.92), transparent);
   text-align: left;
 }
+/* the name links to BoardGameGeek */
 .fan-name {
   display: block;
   font-family: var(--font-heading);
   font-size: 24px;
   line-height: 1;
   color: var(--text);
+  text-decoration: none;
+}
+.fan-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.fan-name:hover .external-icon { opacity: 1; }
+/* players (best with) on the left, everyone's interest dice on the right */
+.fan-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
 }
 .fan-stats {
-  display: block;
-  margin-top: 4px;
+  flex: 0 0 auto;
   font-size: 12px;
   line-height: 1.35;
   color: var(--muted);
@@ -120,12 +131,12 @@
 
 .fan-card.is-hidden img { filter: grayscale(1) brightness(0.6); }
 
-/* everyone's interest dice, just above the game name */
+/* everyone's interest dice, right-aligned next to the player count */
 .fan-interest {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 3px;
-  margin-bottom: 6px;
   font-size: 16px;
   line-height: 1;
 }
@@ -157,41 +168,20 @@
 /* when the card faces forward, move the button to the cover's real top-right corner */
 .fan-card.selected .vote-button { right: calc(var(--slot-open) - var(--cover-w) + 10px); }
 
-/* voter badges: a column of colored initials on the cover's top-left */
-.fan-voters {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  z-index: 1;
-}
-.voter-badge {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  font-size: 12px;
-  font-weight: 700;
-  color: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-}
-.voter-badge.more { background: rgba(10, 5, 15, 0.8); font-size: 10px; }
 
 .fan-info { margin-top: 4px; min-height: 1.6em; }
 /* nothing selected: the info area keeps its size but shows nothing */
 .fan-info.is-placeholder { visibility: hidden; }
-/* title line: centered under the selected card (GameFan sets the translateX) */
+/* Hide button (admin): centered under the selected card (GameFan sets the translateX) */
 .fan-title {
   width: max-content;
   max-width: 100%;
   text-align: center;
   transition: transform 0.12s linear; /* smooths the per-frame follow (GameFan.tsx) */
 }
-.fan-title .owners { margin: 2px 0 0; }
+/* the small "opens in a new tab" icon after the game's name */
+.external-icon { margin-left: 6px; font-size: 0.55em; vertical-align: 0.25em; opacity: 0.7; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: inset(50%); white-space: nowrap; }
 
 /* smaller screens: smaller cards; on phones the row scrolls sideways */
 @media (max-width: 1000px) {
