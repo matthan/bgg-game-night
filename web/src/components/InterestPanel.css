@@ -1,7 +1,7 @@
 /* "Rate your interest" slider, shown under the selected game. */
 .interest-panel {
   box-sizing: border-box;
-  width: max-content; /* GameFan slides it to line up with the selected card */
+  width: max-content; /* GameVoteList slides it to line up with the selected card */
   max-width: 100%;
   margin: 0;
   padding: 10px 20px 10px 30px;
@@ -9,7 +9,7 @@
   background: rgba(0, 0, 0, 0.15);
 }
 
-/* ---------- the sliding scale (adapted from a CodePen) ---------- */
+/* ---------- the sliding scale ---------- */
 /* one row: label · slider · chosen level (stacks on narrow screens) */
 .interest-rate {
   --handle: 54px;   /* the die you drag */

@@ -8,16 +8,12 @@ import {
   type KeyboardEvent,
 } from "react";
 import type { InterestLevel, ListGame, OwnedGame } from "../types";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpRightFromSquare, faThumbsUp } from "@fortawesome/free-solid-svg-icons";
-import { interestInfo, showInInterest } from "../interest";
 import { InterestPanel } from "./InterestPanel";
-import { formatCounts } from "../filterGames";
-import { Die } from "./Die";
-import "./GameFan.css";
+import { GameCard, type BoardGame } from "./GameCard";
+import "./GameVoteList.css";
 
 interface Props {
-  games: (OwnedGame & Partial<Pick<ListGame, "votes" | "interest">>)[];
+  games: BoardGame[];
   showOwners?: boolean; // (not shown by the fan any more)
   onToggleHidden?: (game: OwnedGame) => void; // Hide / Unhide button (admin only)
   me?: string; // signed-in username, to show whether *you* voted
@@ -26,33 +22,20 @@ interface Props {
   onSetInterest?: (game: ListGame, level: InterestLevel | null) => void;
 }
 
-const FOLLOW_MS = 700; // the card animation (0.55s in GameFan.css) plus a little slack
+const FOLLOW_MS = 700; // the card animation (0.55s in GameVoteList.css) plus a little slack
 const FOLLOW_EASE = 0.16; // share of the remaining distance the slider/Hide move each frame (~0.4s glide)
-const VERTICAL_FAN = "(max-width: 1023px)"; // must match the phone section of GameFan.css
+const VERTICAL_FAN = "(max-width: 1023px)"; // must match the phone section of GameVoteList.css
 
 // Opening animation (once, when the fan first appears): after the page title
 // has dropped in, the cards fly in one by one while a "Vote" box shows over
 // them; the box fades out once the last card has landed. Passed to CSS as
-// variables so GameFan.css uses the same timings.
+// variables so GameVoteList.css uses the same timings.
 const INTRO_START_MS = 550; // the page title's animation (index.css) is done by then
 const INTRO_STAGGER_MS = 110; // between one card and the next
 const INTRO_CARD_MS = 750; // each card's own animation
 
-const bggUrl = (id: number) => `https://boardgamegeek.com/boardgame/${id}`;
-
-function formatPlayers(g: OwnedGame) {
-  if (!g.minPlayers) return "?";
-  return g.minPlayers === g.maxPlayers ? `${g.minPlayers}` : `${g.minPlayers}–${g.maxPlayers}`;
-}
-
-/** "2–5 (3)": player count, then the counts BGG voters say are best, in brackets. */
-function formatPlayersAndBest(g: OwnedGame) {
-  return g.bestWith.length ? `${formatPlayers(g)} (${formatCounts(g.bestWith)})` : formatPlayers(g);
-}
-
 /**
- * Every game in the list visible at once, as a fan of tilted 3D cards
- * (adapted from a CodePen). Same props as GameCarousel, so App can swap them.
+ * Every game in the list visible at once
  *
  * - click / tap a card: it opens (selected) — straightened, zoomed in, the
  *   others blur; click it again to close it
@@ -64,7 +47,7 @@ function formatPlayersAndBest(g: OwnedGame) {
  * The selection is stored by POSITION, so when a game is hidden and another
  * fills its spot, the new game is selected in its place.
  */
-export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest }: Props) {
+export function GameVoteList({ games, onToggleHidden, me, onToggleVote, onSetInterest }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   // true during the opening animation; cards added later (e.g. after a Hide) just appear
   const [intro, setIntro] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -115,7 +98,7 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
     (snap = false) => {
       const root = rootRef.current;
       const cards = cardsRef.current;
-      const cover = index !== null ? cardRefs.current[index]?.querySelector(".fan-cover") : null;
+      const cover = index !== null ? cardRefs.current[index]?.querySelector(".game-vote-list-cover") : null;
       if (!root || !cards || !cover) return true;
       const c = cover.getBoundingClientRect();
       const list = cards.getBoundingClientRect();
@@ -145,7 +128,7 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
       }
 
       const rate = rateRef.current;
-      const box = rate?.parentElement; // .fan-rate: the slider's lane
+      const box = rate?.parentElement; // .game-vote-list-rate: the slider's lane
       if (rate && box) {
         const b = box.getBoundingClientRect();
         if (vertical) {
@@ -209,7 +192,7 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
 
   // Arrow keys move the selection along the fan.
   function handleKeyDown(e: KeyboardEvent) {
-    // ← → on the desktop fan, ↑ ↓ on the vertical (phone) fan
+    // ← → on the desktop, ↑ ↓ on the vertical mobile
     if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"].includes(e.key)) return;
     e.preventDefault();
     const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
@@ -217,11 +200,11 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
   }
 
   return (
-    <section id="carousel" className="fan" aria-label="Game list" ref={rootRef}>
-      <div className="fan-body">
+    <section id="game-vote-list" className="game-vote-list" aria-label="Game list" ref={rootRef}>
+      <div className="game-vote-list-body">
         <div
           ref={cardsRef}
-          className={`fan-cards${index !== null ? " has-selection" : ""}${intro ? " intro" : ""}`}
+          className={`game-vote-list-cards${index !== null ? " has-selection" : ""}${intro ? " intro" : ""}`}
           onKeyDown={handleKeyDown}
           style={
             {
@@ -233,109 +216,32 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
           }
         >
           {intro && (
-            <div className="fan-intro-vote" aria-hidden>
+            <div className="game-vote-list-intro-vote" aria-hidden>
               <span>Vote</span>
             </div>
           )}
-          {games.map((g, i) => {
-            const votes = g.votes ?? [];
-            const iVoted = !!me && votes.includes(me);
-            return (
-              <div
-                key={g.id}
-                ref={(el) => {
-                  cardRefs.current[i] = el;
-                }}
-                className={`fan-card${i === index ? " selected" : ""}${g.hidden ? " is-hidden" : ""}${iVoted ? " my-vote" : ""}`}
-                style={{ "--i": i } as CSSProperties} // its place in the opening animation
-              >
-                {/* The cover: click = select. A div acting as a button (not a <button>),
-                  because it contains a real link (the game's name). */}
-                <div
-                  role="button"
-                  tabIndex={0}
-                  className="fan-select"
-                  onClick={() => handleCardClick(i)}
-                  onKeyDown={(e) => {
-                    if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
-                    e.preventDefault();
-                    handleCardClick(i);
-                  }}
-                  aria-pressed={i === index}
-                  aria-label={i === index ? `Close ${g.name}` : `Open ${g.name}`}
-                >
-                  <span className="fan-cover">
-                    {g.image || g.thumbnail ? (
-                      <img src={g.image ?? g.thumbnail ?? ""} alt="" draggable={false} />
-                    ) : (
-                      <span className="fan-placeholder" aria-hidden>
-                        🎲
-                      </span>
-                    )}
-                    {/* name (links to BGG), then players (best with) · everyone's interest */}
-                    <span className="fan-caption">
-                      <a
-                        className="fan-name"
-                        href={bggUrl(g.id)}
-                        target="_blank"
-                        rel="noreferrer"
-                        tabIndex={i === index ? 0 : -1} // reachable by keyboard on the selected card
-                        onClick={(e) => e.stopPropagation()} // opening the link isn't a vote
-                        onKeyDown={(e) => e.stopPropagation()}
-                      >
-                        {g.name}
-                        <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="external-icon" aria-hidden />
-                        <span className="visually-hidden"> (opens BoardGameGeek in a new tab)</span>
-                      </a>
-                      <span className="fan-meta">
-                        <span className="fan-stats">👥 {formatPlayersAndBest(g)}</span>
-                        {/* everyone's interest at a glance, keenest first */}
-                        {(g.interest?.filter((it) => showInInterest(it.username)).length ?? 0) > 0 && (
-                          <span className="fan-interest" aria-hidden>
-                            {g
-                              .interest!.filter((it) => showInInterest(it.username))
-                              .map((it) => (
-                                <Die
-                                  key={it.username}
-                                  icon={interestInfo(it.level).icon}
-                                  color={interestInfo(it.level).color}
-                                  title={`${it.username}: ${interestInfo(it.level).label}`}
-                                />
-                              ))}
-                          </span>
-                        )}
-                      </span>
-                    </span>
-                  </span>
-                </div>
-                {onToggleVote && g.votes && (
-                  <button
-                    type="button"
-                    className={`vote-button${iVoted ? " voted" : ""}${votes.length > 0 ? " has-votes" : ""}`}
-                    onClick={() => onToggleVote(g as ListGame)}
-                    aria-pressed={iVoted}
-                    aria-label={`${iVoted ? "Remove your vote for" : "Vote for"} ${g.name} (${votes.length} vote${votes.length === 1 ? "" : "s"})`}
-                    title={votes.length ? `Votes: ${votes.join(", ")}` : "Vote for this game"}
-                  >
-                    <FontAwesomeIcon icon={faThumbsUp} aria-hidden />
-                    {/* slides out on hover */}
-                    <span className="vote-label" aria-hidden>
-                      {iVoted ? "Voted" : "Vote"}
-                    </span>
-                    {votes.length > 0 && <span className="vote-count">{votes.length}</span>}
-                  </button>
-                )}
-              </div>
-            );
-          })}
+          {games.map((g, i) => (
+            <GameCard
+              key={g.id}
+              game={g}
+              index={i}
+              selected={i === index}
+              me={me}
+              onSelect={() => handleCardClick(i)}
+              onToggleVote={onToggleVote}
+              cardRef={(el) => {
+                cardRefs.current[i] = el;
+              }}
+            />
+          ))}
         </div>
 
         {/* Under the selected card: the Hide button (admin only).
           With nothing selected, the first game's is rendered INVISIBLY, so the
           space is always reserved and the page below doesn't jump on hover. */}
         {shown && onToggleHidden && (
-          <div className={`fan-info${active ? "" : " is-placeholder"}`} aria-hidden={active ? undefined : true}>
-            <div className="fan-title" ref={titleRef}>
+          <div className={`game-vote-list-info${active ? "" : " is-placeholder"}`} aria-hidden={active ? undefined : true}>
+            <div className="game-vote-list-title" ref={titleRef}>
               <button
                 type="button"
                 className="hide-button"
@@ -353,17 +259,17 @@ export function GameFan({ games, onToggleHidden, me, onToggleVote, onSetInterest
           </div>
         )}
 
-        {/* The interest slider: under the fan on desktop, beside it (rotated) on
+        {/* The interest slider: under the game list on desktop, beside it (rotated) on
           phones; lined up with the selected card (see placeTitle). With nothing
           selected the slider is invisible (still taking its space) and a
           placeholder in its place says what to do. */}
         {shown && onSetInterest && me && shown.interest && (
-          <div className={`fan-rate${active ? "" : " is-placeholder"}`}>
-            <div className="fan-rate-hint" aria-hidden={active ? true : undefined}>
+          <div className={`game-vote-list-rate${active ? "" : " is-placeholder"}`}>
+            <div className="game-vote-list-rate-hint" aria-hidden={active ? true : undefined}>
               <span className="hint-hover">Select a game to rate your interest</span>
               <span className="hint-touch">Tap a game to rate your interest</span>
             </div>
-            <div className="fan-rate-follow" ref={rateRef} aria-hidden={active ? undefined : true}>
+            <div className="game-vote-list-rate-follow" ref={rateRef} aria-hidden={active ? undefined : true}>
               <InterestPanel
                 key={shown.id} // a fresh slider for each game
                 game={shown as ListGame}

@@ -14,8 +14,8 @@ interface Props {
 const STOPS = [null, ...INTEREST_LEVELS.map((l) => l.level)] as (InterestLevel | null)[];
 const SAVE_DELAY_MS = 400; // save once the slider has stopped moving
 /**
- * Under the selected game: "Rate your interest" as a sliding scale (adapted
- * from a CodePen): label on the left, the slider, the chosen level on the right.
+ * Under the selected game: "Rate your interest" as a sliding scale:
+ * label on the left, the slider, the chosen level on the right.
  *
  * The slider shows the new level straight away while you drag; it's saved a
  * moment after you stop (or right away if you move on to another game).

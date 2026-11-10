@@ -18,7 +18,7 @@ import { LoginPage } from "./components/LoginPage";
 import { CollectionsBar } from "./components/CollectionsBar";
 import { Filters } from "./components/Filters";
 import { GameCarousel } from "./components/GameCarousel";
-import { GameFan } from "./components/GameFan";
+import { GameVoteList } from "./components/GameVoteList";
 import { useCollections, userKey } from "./hooks/useCollections";
 import { filterGames, mergeCollections, sampleRandom } from "./filterGames";
 import type { Account, CollectionResponse, FilterState, GameList, InterestLevel, ListGame, OwnedGame } from "./types";
@@ -35,11 +35,11 @@ const DEFAULT_FILTERS: FilterState = {
 const MAX_RESULTS = 7;
 
 // How the game list is shown:
-//   "fan"      — all games at once as tilted 3D cards (GameFan)
+//   "fan"      — all games at once as tilted 3D cards (GameVoteList)
 //   "carousel" — the GSAP slideshow (GameCarousel)
 // Switch this one line to go back.
 const LIST_DISPLAY = "fan" as "fan" | "carousel";
-const ListDisplay = LIST_DISPLAY === "fan" ? GameFan : GameCarousel;
+const ListDisplay = LIST_DISPLAY === "fan" ? GameVoteList : GameCarousel;
 
 // How often the page re-checks the game list (new lists, other people's votes).
 const LIST_REFRESH_MS = 15_000;

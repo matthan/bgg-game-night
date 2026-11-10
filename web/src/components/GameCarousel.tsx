@@ -11,26 +11,14 @@ interface Props {
   highlightId?: number;
   showOwners?: boolean;
   onToggleHidden?: (game: OwnedGame) => void; // Hide / Unhide button
-  me?: string; // voting isn't shown in the slideshow (see GameFan)
+  me?: string; // voting isn't shown in the slideshow (see GameVoteList)
   onToggleVote?: (game: never) => void;
   members?: string[]; // interest isn't shown in the slideshow either
   onSetInterest?: (game: never, level: never) => void;
 }
 
 /**
- * Infinite "seamless loop" card carousel, adapted from GreenSock's CodePen demo.
- *
- * The idea:
- * 1. Build one long timeline (rawSequence) where every card slides from right
- *    to left, growing as it nears the center and shrinking/fading after.
- *    Cards start `spacing` seconds apart, so they follow each other in a line.
- * 2. Add extra copies of the first/last animations so the ends overlap.
- * 3. A second timeline (seamlessLoop) scrubs rawSequence's playhead through the
- *    middle section and repeats forever, so the line never runs out.
- * 4. Prev/Next move the playhead by one `spacing` step (one card).
- *
- * Differences from the CodePen: no ScrollTrigger (it would hijack page
- * scrolling); we drive it with buttons, arrow keys and swipes instead.
+ * Card carousel
  */
 export function GameCarousel({ games, highlightId, showOwners = false, onToggleHidden }: Props) {
   const galleryRef = useRef<HTMLDivElement>(null);
@@ -163,7 +151,7 @@ export function GameCarousel({ games, highlightId, showOwners = false, onToggleH
                   <img src={g.image ?? g.thumbnail ?? ""} alt="" draggable={false} />
                 ) : (
                   <div className="carousel-placeholder" aria-hidden>
-                    🎲
+                    Carousel Placeholder
                   </div>
                 )}
                 <div className="carousel-caption">
@@ -247,10 +235,7 @@ function useMediaQuery(query: string) {
 const VISIBLE_EACH_SIDE = 2;
 
 /**
- * Based on the GreenSock demo, with the loop math reworked so that one lap of
- * `seamlessLoop` is exactly one trip through the cards (count × spacing).
- * That makes "move one card" = "move the playhead by `spacing`" for ANY
- * number of games, and card 0 is in front at the start.
+ * one lap of `seamlessLoop` is exactly one trip through the cards (count × spacing).
  */
 function buildSeamlessLoop(items: HTMLElement[], spacing: number, slotWidth: number) {
   const count = items.length;

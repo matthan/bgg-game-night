@@ -1,11 +1,9 @@
 /*
- * Fan of tilted 3D cards (adapted from a CodePen). Used by GameFan.tsx only,
- * so deleting this file + GameFan.tsx (and switching LIST_DISPLAY in App.tsx
- * back to "carousel") removes it completely.
+ * Fan of tilted 3D game cards
  *
  * Sizes are CSS variables so the fan can shrink on smaller screens.
  */
-.fan {
+.game-vote-list {
   /* one smooth curve and length for every card animation, so a card turns,
      widens and zooms together in a single movement */
   --fan-ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -17,7 +15,7 @@
   margin-top: 24px;
 }
 
-.fan-cards {
+.game-vote-list-cards {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -28,7 +26,7 @@
 }
 
 /* A card: a narrow slot with the (wider) cover overflowing to the right. */
-.fan-card {
+.game-vote-list-card {
   position: relative;
   flex: 0 0 auto;
   width: var(--slot);
@@ -38,18 +36,18 @@
     filter var(--fan-speed) var(--fan-ease);
 }
 /* cards YOU voted for sit higher than the rest (selected or not) */
-.fan-card.my-vote { translate: 0 -42px; }
+.game-vote-list-card.my-vote { translate: 0 -42px; }
 /* the cover acts as a button (click = select); no button look */
-.fan-select {
+.game-vote-list-select {
   all: unset;
   position: absolute;
   inset: 0;
   cursor: pointer;
   perspective: 600px;
 }
-.fan-select:focus-visible .fan-cover { outline: 3px solid var(--accent); outline-offset: 3px; }
+.game-vote-list-select:focus-visible .game-vote-list-cover { outline: 3px solid var(--accent); outline-offset: 3px; }
 
-.fan-cover {
+.game-vote-list-cover {
   position: absolute;
   inset: 0 auto auto 0;
   width: var(--cover-w);
@@ -64,7 +62,7 @@
     filter 0.2s;
   will-change: transform; /* keeps the 3D turn on the GPU */
 }
-.fan-cover img {
+.game-vote-list-cover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -72,7 +70,7 @@
   user-select: none;
   pointer-events: none;
 }
-.fan-placeholder {
+.game-vote-list-placeholder {
   display: grid;
   place-items: center;
   height: 100%;
@@ -80,7 +78,7 @@
   background: linear-gradient(160deg, var(--surface), var(--bg));
 }
 /* name + stats, over a dark fade at the bottom of the cover */
-.fan-caption {
+.game-vote-list-caption {
   position: absolute;
   inset: auto 0 0 0;
   padding: 2.5rem 0.9rem 0.8rem;
@@ -88,7 +86,7 @@
   text-align: left;
 }
 /* the name links to BoardGameGeek */
-.fan-name {
+.game-vote-list-name {
   display: block;
   font-family: var(--font-heading);
   font-size: 24px;
@@ -96,17 +94,17 @@
   color: var(--text);
   text-decoration: none;
 }
-.fan-name:hover { text-decoration: underline; text-underline-offset: 3px; }
-.fan-name:hover .external-icon { opacity: 1; }
+.game-vote-list-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.game-vote-list-name:hover .external-icon { opacity: 1; }
 /* players (best with) on the left, everyone's interest dice on the right */
-.fan-meta {
+.game-vote-list-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
   margin-top: 5px;
 }
-.fan-stats {
+.game-vote-list-stats {
   flex: 0 0 auto;
   font-size: 12px;
   line-height: 1.35;
@@ -116,25 +114,25 @@
 /* hover (mouse only): a slight lift and a subtle turn toward you (no change in
    size, so nothing shifts); clicking the card opens it */
 @media (hover: hover) {
-  .fan-card:hover:not(.selected) .fan-cover { filter: brightness(1.12); transform: rotateY(34deg); }
+  .game-vote-list-card:hover:not(.selected) .game-vote-list-cover { filter: brightness(1.12); transform: rotateY(34deg); }
 }
 
 /* selected: face forward, zoom in, everything else blurs */
-.fan-card.selected {
+.game-vote-list-card.selected {
   width: var(--slot-open);
   z-index: 5;
   scale: 1.3;
 }
-.fan-card.selected .fan-cover {
+.game-vote-list-card.selected .game-vote-list-cover {
   transform: rotateY(0);
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 }
-.fan-cards.has-selection .fan-card:not(.selected) { filter: blur(3px) brightness(0.75); } /* blurred and darker */
+.game-vote-list-cards.has-selection .game-vote-list-card:not(.selected) { filter: blur(3px) brightness(0.75); } /* blurred and darker */
 
-.fan-card.is-hidden img { filter: grayscale(1) brightness(0.6); }
+.game-vote-list-card.is-hidden img { filter: grayscale(1) brightness(0.6); }
 
 /* everyone's interest dice, right-aligned next to the player count */
-.fan-interest {
+.game-vote-list-interest {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -142,7 +140,7 @@
   font-size: 16px;
   line-height: 1;
 }
-.fan-interest svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6)); } /* lifts the dice off the cover */
+.game-vote-list-interest svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6)); } /* lifts the dice off the cover */
 
 /* ---------- votes ---------- */
 /* vote button (square-check): top-right of the part of the card you can see */
@@ -168,7 +166,7 @@
     transform 0.15s;
 }
 /* on closed cards the button sits 12px higher, nearer the top edge */
-.fan-card:not(.selected) .vote-button { top: -2px; }
+.game-vote-list-card:not(.selected) .vote-button { top: -2px; }
 .vote-button:hover { transform: scale(1.08); }
 .vote-button.voted { background: var(--accent); color: var(--accent-text); }
 .vote-button.has-votes { padding: 0 12px 0 9px; }
@@ -197,34 +195,34 @@
 .vote-button:hover:not(.has-votes),
 .vote-button:focus-visible:not(.has-votes) { padding-right: 12px; }
 /* when the card faces forward, move the button to the cover's real top-right corner */
-.fan-card.selected .vote-button { right: calc(var(--slot-open) - var(--cover-w) + 10px); }
+.game-vote-list-card.selected .vote-button { right: calc(var(--slot-open) - var(--cover-w) + 10px); }
 
 
-.fan-info { margin-top: 4px; min-height: 1.6em; }
+.game-vote-list-info { margin-top: 4px; min-height: 1.6em; }
 /* nothing selected: these keep their size; the slider is swapped for a
    placeholder (below), the Hide button shows nothing */
-.fan-info,
-.fan-rate-follow,
-.fan-rate-hint { transition: opacity 0.35s ease, visibility 0.35s; }
-.fan-info.is-placeholder,
-.fan-rate.is-placeholder .fan-rate-follow,
-.fan-rate:not(.is-placeholder) .fan-rate-hint { opacity: 0; visibility: hidden; }
+.game-vote-list-info,
+.game-vote-list-rate-follow,
+.game-vote-list-rate-hint { transition: opacity 0.35s ease, visibility 0.35s; }
+.game-vote-list-info.is-placeholder,
+.game-vote-list-rate.is-placeholder .game-vote-list-rate-follow,
+.game-vote-list-rate:not(.is-placeholder) .game-vote-list-rate-hint { opacity: 0; visibility: hidden; }
 
-/* the interest slider's lane under the fan; .fan-rate-follow slides along it
-   to sit under the selected card (GameFan sets the transform) */
-.fan-rate { position: relative; margin-top: 14px; }
-.fan-rate-follow { width: max-content; max-width: 100%; will-change: transform; } /* moved (and eased) by GameFan.tsx */
+/* the interest slider's lane under the fan; .game-vote-list-rate-follow slides along it
+   to sit under the selected card (GameVoteList sets the transform) */
+.game-vote-list-rate { position: relative; margin-top: 14px; }
+.game-vote-list-rate-follow { width: max-content; max-width: 100%; will-change: transform; } /* moved (and eased) by GameVoteList.tsx */
 
 /* the slider's placeholder: a dashed box where the slider will appear, saying
    what to do (hover with a mouse, tap on touch screens) */
-.fan-rate-hint {
+.game-vote-list-rate-hint {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
   pointer-events: none;
 }
-.fan-rate-hint > span {
+.game-vote-list-rate-hint > span {
   box-sizing: border-box;
   display: grid;
   place-items: center;
@@ -246,12 +244,12 @@
   .hint-hover { display: none !important; }
   .hint-touch { display: grid !important; }
 }
-/* Hide button (admin): centered under the selected card (GameFan sets the translateX) */
-.fan-title {
+/* Hide button (admin): centered under the selected card (GameVoteList sets the translateX) */
+.game-vote-list-title {
   width: max-content;
   max-width: 100%;
   text-align: center;
-  will-change: transform; /* moved (and eased) by GameFan.tsx */
+  will-change: transform; /* moved (and eased) by GameVoteList.tsx */
 }
 /* the small "opens in a new tab" icon after the game's name */
 .external-icon { margin-left: 6px; font-size: 0.55em; vertical-align: 0.25em; opacity: 0.7; }
@@ -267,7 +265,7 @@
  * room for the open one), so the page below doesn't jump.
  */
 @media (max-width: 1023px) {
-  .fan {
+  .game-vote-list {
     --row: 76px;        /* visible strip of each card */
     --cover-h: 210px;   /* a card's full height (shorter than on desktop) */
     --shift: 40px;      /* how far a voted card slides right */
@@ -276,7 +274,7 @@
     margin-top: 12px;
   }
   /* cards on the left, the slider's column on the right, Hide under the cards */
-  .fan-body {
+  .game-vote-list-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--rail);
     column-gap: 8px;
@@ -284,12 +282,12 @@
     max-width: 660px;
     margin: 0 auto;
   }
-  .fan-info { grid-column: 1; grid-row: 2; }
-  .fan-rate { grid-column: 2; grid-row: 1; align-self: stretch; margin: 0; }
+  .game-vote-list-info { grid-column: 1; grid-row: 2; }
+  .game-vote-list-rate { grid-column: 2; grid-row: 1; align-self: stretch; margin: 0; }
   /* placeholder: a tall dashed strip down the middle of the column, text turned
      like the slider */
-  .fan-rate-hint { inset: 0; }
-  .fan-rate-hint > span {
+  .game-vote-list-rate-hint { inset: 0; }
+  .game-vote-list-rate-hint > span {
     width: var(--rail);
     min-width: 0;
     height: min(var(--rate-len), 100%);
@@ -297,7 +295,7 @@
     writing-mode: vertical-rl;
   }
   /* the slider, turned 90° (no opinion at the top), sliding up and down */
-  .fan-rate-follow {
+  .game-vote-list-rate-follow {
     position: absolute;
     top: 0;
     left: 0;
@@ -305,7 +303,7 @@
     height: var(--rate-len);
     max-width: none;
   }
-  .fan-cards {
+  .game-vote-list-cards {
     grid-column: 1;
     grid-row: 1;
     flex-direction: column;
@@ -320,15 +318,15 @@
     transition: padding var(--fan-speed) var(--fan-ease);
   }
 
-  .fan-card { width: calc(100% - var(--shift)); height: var(--row); }
+  .game-vote-list-card { width: calc(100% - var(--shift)); height: var(--row); }
   /* when a card opens, the others' strips get a little shorter to make room,
      so the list keeps the same height (and the last card keeps its overhang) */
-  .fan-cards.has-selection .fan-card:not(.selected) {
+  .game-vote-list-cards.has-selection .game-vote-list-card:not(.selected) {
     height: calc(var(--row) - (var(--cover-h) - var(--row)) / max(var(--intro-count) - 1, 1));
   }
-  .fan-card.my-vote { translate: var(--shift) 0; }
-  .fan-select { perspective: 900px; }
-  .fan-cover {
+  .game-vote-list-card.my-vote { translate: var(--shift) 0; }
+  .game-vote-list-select { perspective: 900px; }
+  .game-vote-list-cover {
     width: 100%;
     height: var(--cover-h);
     border-radius: 16px;
@@ -336,28 +334,28 @@
     transform-origin: center top;
     box-shadow: 0 -10px 18px rgba(0, 0, 0, 0.45);
   }
-  .fan-cover img { object-position: top; } /* keep the top of the box art in view */
+  .game-vote-list-cover img { object-position: top; } /* keep the top of the box art in view */
 
-  .fan-card.selected { width: calc(100% - var(--shift)); height: var(--cover-h); scale: 1; }
-  .fan-card.selected .fan-cover { transform: rotateX(0); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); }
+  .game-vote-list-card.selected { width: calc(100% - var(--shift)); height: var(--cover-h); scale: 1; }
+  .game-vote-list-card.selected .game-vote-list-cover { transform: rotateX(0); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); }
   /* hover (mouse only): the subtle turn is on the horizontal axis here */
   @media (hover: hover) {
-    .fan-card:hover:not(.selected) .fan-cover { transform: rotateX(-22deg); }
+    .game-vote-list-card:hover:not(.selected) .game-vote-list-cover { transform: rotateX(-22deg); }
   }
-  .fan-card.selected .vote-button { right: 10px; }
+  .game-vote-list-card.selected .vote-button { right: 10px; }
 
-  .fan-caption { padding: 1.8rem 0.8rem 0.7rem; transition: opacity var(--fan-speed) var(--fan-ease); }
+  .game-vote-list-caption { padding: 1.8rem 0.8rem 0.7rem; transition: opacity var(--fan-speed) var(--fan-ease); }
   /* only the open card shows its name/players/dice: on the others that part is
      covered by the next card anyway, and a voted card sliding right would
      otherwise uncover half a caption on the card above it */
-  .fan-card:not(.selected) .fan-caption { opacity: 0; }
-  .fan-name { font-size: 22px; }
+  .game-vote-list-card:not(.selected) .game-vote-list-caption { opacity: 0; }
+  .game-vote-list-name { font-size: 22px; }
 }
-/* ---------- opening animation (GameFan.tsx sets the timing variables) ---------- */
+/* ---------- opening animation (GameVoteList.tsx sets the timing variables) ---------- */
 /* each card fades in, sliding in from the right while swinging round on its
    vertical axis (rotateY), one after another; uses `transform`, which the
    selected/voted styles don't touch */
-.fan-cards.intro .fan-card {
+.game-vote-list-cards.intro .game-vote-list-card {
   animation: fan-card-in var(--intro-card) var(--fan-ease)
     calc(var(--intro-start) + var(--i) * var(--intro-stagger)) both;
 }
@@ -366,8 +364,8 @@
   to { opacity: 1; transform: perspective(900px) translateX(0) rotateY(0); }
 }
 /* the "Vote" box over the cards: fades in with the title, out after the last card */
-.fan-cards { position: relative; }
-.fan-intro-vote {
+.game-vote-list-cards { position: relative; }
+.game-vote-list-intro-vote {
   position: absolute;
   inset: 0;
   z-index: 10;
@@ -379,7 +377,7 @@
     fan-vote-out 0.45s ease
       calc(var(--intro-start) + (var(--intro-count) - 1) * var(--intro-stagger) + var(--intro-card) * 0.7) forwards;
 }
-.fan-intro-vote span {
+.game-vote-list-intro-vote span {
   padding: 24px 64px;
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.55);
@@ -398,12 +396,12 @@
   to { opacity: 1; transform: perspective(800px) translateY(0) rotateX(0); }
 }
 @media (max-width: 1023px) {
-  .fan-cards.intro .fan-card { animation-name: fan-card-in-vertical; }
+  .game-vote-list-cards.intro .game-vote-list-card { animation-name: fan-card-in-vertical; }
 }
 @keyframes fan-vote-in { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: none; } }
 @keyframes fan-vote-out { from { opacity: 1; } to { opacity: 0; transform: scale(1.04); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .fan-card, .fan-cover, .vote-button, .fan-info, .fan-rate-follow, .fan-rate-hint { transition: none; }
-  .fan-cards.intro .fan-card, .fan-intro-vote { animation: none; }
+  .game-vote-list-card, .game-vote-list-cover, .vote-button, .game-vote-list-info, .game-vote-list-rate-follow, .game-vote-list-rate-hint { transition: none; }
+  .game-vote-list-cards.intro .game-vote-list-card, .game-vote-list-intro-vote { animation: none; }
 }
