@@ -101,11 +101,13 @@ export interface AddGamesResult {
 
 export interface FilterState {
   players: number | null; // null = any
-  maxTime: number | null; // minutes; null = any
-  weight: WeightClass | null; // null = any
   bestWith: boolean; // with a player count: only games voted "Best" at that count
   recommendedWith: boolean; // with a player count: only games voted "Recommended" at that count
+  interestBoost: InterestBoost; // how much everyone's interest favours games when picking
 }
 
-/** Weight buckets — the cut-offs live in WEIGHT_CLASSES (filterGames.ts). */
-export type WeightClass = "light" | "medium-light" | "medium" | "medium-heavy" | "heavy";
+/** How strongly a new list favours games people are keen on (see interestWeight in filterGames.ts). */
+export type InterestBoost = "off" | "gentle" | "strong";
+
+/** Average interest per game (GET /api/interest): 0 = rather not … 5 = yes, please! */
+export type InterestSummary = Record<number, { average: number; count: number }>;

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createList,
   getCurrentList,
+  getInterestSummary,
   getMe,
   hideUser,
   listUsers,
@@ -14,21 +15,21 @@ import {
 } from "./api";
 import { AccountsPanel } from "./components/AccountsPanel";
 import { AddGamesPanel } from "./components/AddGamesPanel";
+import { RateInterestPage } from "./components/RateInterestPage";
 import { LoginPage } from "./components/LoginPage";
 import { CollectionsBar } from "./components/CollectionsBar";
 import { Filters } from "./components/Filters";
 import { GameCarousel } from "./components/GameCarousel";
 import { GameVoteList } from "./components/GameVoteList";
 import { useCollections, userKey } from "./hooks/useCollections";
-import { filterGames, mergeCollections, sampleRandom } from "./filterGames";
+import { filterGames, mergeCollections, pickGames } from "./filterGames";
 import type { Account, CollectionResponse, FilterState, GameList, InterestLevel, ListGame, OwnedGame } from "./types";
 
 const DEFAULT_FILTERS: FilterState = {
   players: null,
-  maxTime: null,
-  weight: null,
   bestWith: false,
   recommendedWith: false,
+  interestBoost: "gentle", // lists made before this setting existed count as "gentle" too
 };
 
 // A game list has at most this many games, chosen at random from the matches.
@@ -72,6 +73,13 @@ export default function App() {
   return <GamePicker account={account} onSignOut={handleSignOut} />;
 }
 
+/** A saved list's filters with today's defaults filled in, and old settings
+ * (e.g. the removed time and weight filters) dropped. */
+const withDefaults = (saved: Partial<FilterState> | undefined): FilterState =>
+  Object.fromEntries(
+    (Object.keys(DEFAULT_FILTERS) as (keyof FilterState)[]).map((k) => [k, saved?.[k] ?? DEFAULT_FILTERS[k]]),
+  ) as unknown as FilterState;
+
 const sameFilters = (a: FilterState, b: FilterState) =>
   (Object.keys(DEFAULT_FILTERS) as (keyof FilterState)[]).every((k) => a[k] === b[k]);
 
@@ -80,6 +88,25 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
   const [showAccounts, setShowAccounts] = useState(false);
   const [showAddGames, setShowAddGames] = useState(false);
   const canAddGames = userKey(account.username) !== "guest"; // the shared guest sign-in has no games
+
+  // Which page: the game list, or "Rate games" (#rate in the address, so the
+  // browser's back button and bookmarks work). Guest has no interest to rate.
+  const pageFromHash = () => (window.location.hash === "#rate" && canAddGames ? "rate" : "list");
+  const [page, setPage] = useState<"list" | "rate">(pageFromHash);
+  useEffect(() => {
+    const onHash = () => {
+      const next = pageFromHash();
+      setPage(next);
+      window.scrollTo(0, 0);
+      if (next === "list")
+        getCurrentList()
+          .then(setList)
+          .catch(() => {}); // pick up ratings made meanwhile
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // --- State: the minimum data the UI needs to remember ---
   // null until the saved collections have been loaded from the API
@@ -122,14 +149,19 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
   // own edits are kept until they create a new list.
   useEffect(() => {
     if (!list) return;
-    if (!isAdmin || !filtersTouched.current) setFilters({ ...DEFAULT_FILTERS, ...list.filters });
+    if (!isAdmin || !filtersTouched.current) setFilters(withDefaults(list.filters));
   }, [list, isAdmin]);
 
   // --- Data fetching (custom hook) ---
   const { entries, refresh, markGameHidden, setCollection } = useCollections(usernames);
   const [showHidden, setShowHidden] = useState(false); // admin: allow hidden games in new lists
-  // for "Undo": the hidden game, where it was, and the game that replaced it
-  const [justHidden, setJustHidden] = useState<{ game: OwnedGame; index: number; replacementId: number | null } | null>(null);
+  // for "Undo": what happened (hidden or just replaced), the game, where it was, and the game that took its spot
+  const [justHidden, setJustHidden] = useState<{
+    kind: "hide" | "replace";
+    game: OwnedGame;
+    index: number;
+    replacementId: number | null;
+  } | null>(null);
   const [hideError, setHideError] = useState<string | null>(null);
 
   // --- Derived state: computed from other state, NOT stored separately ---
@@ -147,7 +179,7 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
     () => filterGames(allGames, filters).filter((g) => showHidden || !g.hidden),
     [allGames, filters, showHidden],
   );
-  const filtersChanged = isAdmin && !!list && !sameFilters(filters, { ...DEFAULT_FILTERS, ...list.filters });
+  const filtersChanged = isAdmin && !!list && !sameFilters(filters, withDefaults(list.filters));
 
   const anyLoading = usernames.some((u) => {
     const status = entries[userKey(u)]?.status;
@@ -190,7 +222,9 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
     setListError(null);
     setJustHidden(null);
     try {
-      const picked = sampleRandom(matches, MAX_RESULTS).map((g) => g.id);
+      // random, but favouring games people are keen on (as the filters' "Favour well-liked games" says)
+      const summary = await getInterestSummary();
+      const picked = pickGames(matches, MAX_RESULTS, summary, filters.interestBoost).map((g) => g.id);
       setList(await createList(filters, picked));
       filtersTouched.current = false;
     } catch (e) {
@@ -200,13 +234,16 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
     }
   }
 
-  /** Another random game for the list: fits the list's filters, not hidden, not already in it. */
-  function pickReplacement(exclude: Set<number>): OwnedGame | null {
+  /**
+   * Another random game for the list: fits the list's filters, not hidden, not
+   * already in it; favours well-liked games the same way the list did.
+   */
+  async function pickReplacement(exclude: Set<number>): Promise<OwnedGame | null> {
     if (!list) return null;
-    const pool = filterGames(allGames, { ...DEFAULT_FILTERS, ...list.filters }).filter(
-      (g) => !g.hidden && !exclude.has(g.id),
-    );
-    return sampleRandom(pool, 1)[0] ?? null;
+    const listFilters = withDefaults(list.filters);
+    const pool = filterGames(allGames, listFilters).filter((g) => !g.hidden && !exclude.has(g.id));
+    const summary = await getInterestSummary();
+    return pickGames(pool, 1, summary, listFilters.interestBoost)[0] ?? null;
   }
 
   // Hide a game: it leaves the results everywhere, and its spot in the list is
@@ -226,14 +263,34 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
       await setGameHidden(game.id, true);
       markGameHidden(game.id, true);
       const index = ids.indexOf(game.id);
-      const replacement = pickReplacement(new Set([...ids, game.id]));
+      const replacement = await pickReplacement(new Set([...ids, game.id]));
       const nextIds = replacement
         ? ids.map((id) => (id === game.id ? replacement.id : id))
         : ids.filter((id) => id !== game.id); // nothing else fits: the list just gets shorter
       setList(await updateListGames(nextIds));
-      setJustHidden({ game, index, replacementId: replacement?.id ?? null });
+      setJustHidden({ kind: "hide", game, index, replacementId: replacement?.id ?? null });
     } catch (err) {
       setHideError(`Couldn't save that: ${err instanceof Error ? err.message : "unknown error"}`);
+    }
+  }
+
+  // Replace a game: swap it for another random match, WITHOUT hiding it (it can
+  // still come up in future lists). Its votes go with it, as with Hide.
+  async function handleReplace(game: OwnedGame) {
+    if (!list) return;
+    setHideError(null);
+    const ids = list.games.map((g) => g.id);
+    try {
+      const replacement = await pickReplacement(new Set(ids));
+      if (!replacement) {
+        setHideError(`No other games match this list's filters, so ${game.name} stays.`);
+        return;
+      }
+      const index = ids.indexOf(game.id);
+      setList(await updateListGames(ids.map((id) => (id === game.id ? replacement.id : id))));
+      setJustHidden({ kind: "replace", game, index, replacementId: replacement.id });
+    } catch (err) {
+      setHideError(`Couldn't replace it: ${err instanceof Error ? err.message : "unknown error"}`);
     }
   }
 
@@ -253,7 +310,9 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
       setList(await setVote(game.id, voted));
     } catch (err) {
       setListError(`Couldn't save your vote: ${err instanceof Error ? err.message : "unknown error"}`);
-      getCurrentList().then(setList).catch(() => {});
+      getCurrentList()
+        .then(setList)
+        .catch(() => {});
     }
   }
 
@@ -272,22 +331,28 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
     try {
       const interest = await setInterest(game.id, level);
       setList((current) =>
-        current ? { ...current, games: current.games.map((g) => (g.id === game.id ? { ...g, interest } : g)) } : current,
+        current
+          ? { ...current, games: current.games.map((g) => (g.id === game.id ? { ...g, interest } : g)) }
+          : current,
       );
     } catch (err) {
       setListError(`Couldn't save your interest: ${err instanceof Error ? err.message : "unknown error"}`);
-      getCurrentList().then(setList).catch(() => {});
+      getCurrentList()
+        .then(setList)
+        .catch(() => {});
     }
   }
 
-  // Undo a hide: show the game again and put it back where it was.
+  // Undo a hide or replace: (show the game again and) put it back where it was.
   async function handleUndoHide() {
     if (!list || !justHidden) return;
-    const { game, index, replacementId } = justHidden;
+    const { kind, game, index, replacementId } = justHidden;
     setJustHidden(null);
     try {
-      await setGameHidden(game.id, false);
-      markGameHidden(game.id, false);
+      if (kind === "hide") {
+        await setGameHidden(game.id, false);
+        markGameHidden(game.id, false);
+      }
       const ids = list.games.map((g) => g.id);
       const nextIds =
         replacementId !== null && ids.includes(replacementId)
@@ -328,6 +393,15 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
           Signed in as <strong>{account.username}</strong>
         </span>
         {canAddGames && (
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => (window.location.hash = page === "rate" ? "" : "rate")}
+          >
+            {page === "rate" ? "Boardgame Picker" : "Rate games"}
+          </button>
+        )}
+        {canAddGames && (
           <button type="button" className="text-button" onClick={() => setShowAddGames((s) => !s)}>
             Add games
           </button>
@@ -352,106 +426,127 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
         />
       )}
 
-      {/* 2. title */}
-      <header id="site-header" className="site-header">
-        <p className="eyebrow">Boardroom Game Night</p>
-        <h1>Board Game Picker</h1>
-        <p className="muted">Game night approaches. What are you excited to play?</p>
-      </header>
-
-      {/* 3–4. the shared game list */}
-      {list === null && (
-        <p id="no-list" className="status">
-          {isAdmin
-            ? "No game list yet. Choose filters, then click Create game list."
-            : "No game list yet. Check back soon!"}
-        </p>
-      )}
-      {list && (
+      {page === "rate" ? (
+        /* "Rate games": every game in the collections, as a grid you rate in one tap each */
+        <RateInterestPage
+          games={allGames}
+          collections={loaded.map((c) => c.username)}
+          loading={anyLoading}
+          onHide={isAdmin ? (g) => setGameHidden(g.id, true).then(() => markGameHidden(g.id, true)) : undefined}
+          onUnhide={isAdmin ? (g) => setGameHidden(g.id, false).then(() => markGameHidden(g.id, false)) : undefined}
+        />
+      ) : (
         <>
-          <ListDisplay
-            games={list.games.slice(0, MAX_RESULTS)} // older lists may have had 8
-            showOwners={loaded.length > 1}
-            onToggleHidden={isAdmin ? handleToggleHidden : undefined}
-            me={account.username}
-            onToggleVote={handleToggleVote}
-            members={list.members}
-            onSetInterest={handleSetInterest}
-          />
-          {justHidden && (
-            <p id="hide-message" className="status" role="status">
-              Hid <strong>{justHidden.game.name}</strong>
-              {justHidden.replacementId !== null ? " and filled its spot with another match." : " (no other games match)."}{" "}
-              <button type="button" className="text-button" onClick={handleUndoHide}>
-                Undo
-              </button>
+          {/* 2. title */}
+          <header id="site-header" className="site-header">
+            <p className="eyebrow">Boardroom Game Night</p>
+            <h1>Board Game Picker</h1>
+            <p className="muted">Game night approaches. What are you excited to play?</p>
+          </header>
+
+          {/* 3–4. the shared game list */}
+          {list === null && (
+            <p id="no-list" className="status">
+              {isAdmin
+                ? "No game list yet. Choose filters, then click Create game list."
+                : "No game list yet. Check back soon!"}
             </p>
           )}
-          {hideError && <p className="status error">⚠️ {hideError}</p>}
-        </>
-      )}
-
-      {/* Errors from votes, interest or making a list: everyone sees these. */}
-      {listError && <p className="status error">⚠️ {listError}</p>}
-
-      {/* 5–8. admin only (matthan): filters, Create game list, collections, summary.
-          Everyone else just sees the game list above. */}
-      {isAdmin && (
-        <>
-          {/* 5–6. filters + create button */}
-          {loaded.length > 0 && (
+          {list && (
             <>
-              <Filters value={filters} onChange={handleFiltersChange} />
-              <div id="list-actions" className="list-actions">
-                <button type="button" className="create-list-button" onClick={handleCreateList} disabled={creating}>
-                  {creating ? "Creating…" : list ? "Create new game list" : "Create game list"}
-                </button>
-                <span className="muted">
-                  {matches.length} game{matches.length === 1 ? "" : "s"} match
-                  {filtersChanged && " · filters changed since the current list"}
-                </span>
-              </div>
+              <ListDisplay
+                games={list.games.slice(0, MAX_RESULTS)} // older lists may have had 8
+                showOwners={loaded.length > 1}
+                onToggleHidden={isAdmin ? handleToggleHidden : undefined}
+                onReplace={isAdmin ? handleReplace : undefined}
+                me={account.username}
+                onToggleVote={handleToggleVote}
+                members={list.members}
+                onSetInterest={handleSetInterest}
+              />
+              {justHidden && (
+                <p id="hide-message" className="status" role="status">
+                  {justHidden.kind === "replace" ? "Replaced " : "Hid "}
+                  <strong>{justHidden.game.name}</strong>
+                  {justHidden.kind === "replace"
+                    ? " with another match."
+                    : justHidden.replacementId !== null
+                      ? " and filled its spot with another match."
+                      : " (no other games match)."}{" "}
+                  <button type="button" className="text-button" onClick={handleUndoHide}>
+                    Undo
+                  </button>
+                </p>
+              )}
+              {hideError && <p className="status error">⚠️ {hideError}</p>}
             </>
           )}
 
-          {/* 7. collections */}
-          {savedUsernames === null ? (
-            <p className="muted">Loading saved collections…</p>
-          ) : (
-            <CollectionsBar
-              usernames={usernames}
-              entries={entries}
-              onAdd={handleAdd}
-              onRemove={handleRemove}
-              onRefresh={refresh}
-            />
-          )}
-          {anyLoading && <p className="status">Loading collections… (BGG can be slow the first time)</p>}
-          {errors.map(({ name, entry }) => (
-            <p key={name} className="status error">
-              ⚠️ {name}: {entry.error}
-            </p>
-          ))}
-          {savedUsernames?.length === 0 && <p className="muted">No collections yet. Add one to get started.</p>}
+          {/* Errors from votes, interest or making a list: everyone sees these. */}
+          {listError && <p className="status error">⚠️ {listError}</p>}
 
-          {/* 8. collection summary */}
-          {loaded.length > 0 && (
+          {/* 5–8. admin only (matthan): filters, Create game list, collections, summary.
+          Everyone else just sees the game list above. */}
+          {isAdmin && (
             <>
-              <p id="collection-summary" className="muted">
-                {allGames.length - hiddenCount} games across {loaded.length} collection{loaded.length > 1 ? "s" : ""}
-                {hiddenCount > 0 && (
-                  <>
-                    {" "}· {hiddenCount} hidden ·{" "}
-                    <button type="button" className="text-button" onClick={() => setShowHidden((s) => !s)}>
-                      {showHidden ? "leave them out of new lists" : "allow them in new lists"}
+              {/* 5–6. filters + create button */}
+              {loaded.length > 0 && (
+                <>
+                  <Filters value={filters} onChange={handleFiltersChange} />
+                  <div id="list-actions" className="list-actions">
+                    <button type="button" className="create-list-button" onClick={handleCreateList} disabled={creating}>
+                      {creating ? "Creating…" : list ? "Create new game list" : "Create game list"}
                     </button>
-                  </>
-                )}
-              </p>
-              {isMock && (
-                <p id="mock-banner" className="banner">
-                  Mock mode: showing sample games. Add your BGG token to <code>.env</code> for real data.
+                    <span className="muted">
+                      {matches.length} game{matches.length === 1 ? "" : "s"} match
+                      {filtersChanged && " · filters changed since the current list"}
+                    </span>
+                  </div>
+                </>
+              )}
+
+              {/* 7. collections */}
+              {savedUsernames === null ? (
+                <p className="muted">Loading saved collections…</p>
+              ) : (
+                <CollectionsBar
+                  usernames={usernames}
+                  entries={entries}
+                  onAdd={handleAdd}
+                  onRemove={handleRemove}
+                  onRefresh={refresh}
+                />
+              )}
+              {anyLoading && <p className="status">Loading collections… (BGG can be slow the first time)</p>}
+              {errors.map(({ name, entry }) => (
+                <p key={name} className="status error">
+                  ⚠️ {name}: {entry.error}
                 </p>
+              ))}
+              {savedUsernames?.length === 0 && <p className="muted">No collections yet. Add one to get started.</p>}
+
+              {/* 8. collection summary */}
+              {loaded.length > 0 && (
+                <>
+                  <p id="collection-summary" className="muted">
+                    {allGames.length - hiddenCount} games across {loaded.length} collection
+                    {loaded.length > 1 ? "s" : ""}
+                    {hiddenCount > 0 && (
+                      <>
+                        {" "}
+                        · {hiddenCount} hidden ·{" "}
+                        <button type="button" className="text-button" onClick={() => setShowHidden((s) => !s)}>
+                          {showHidden ? "leave them out of new lists" : "allow them in new lists"}
+                        </button>
+                      </>
+                    )}
+                  </p>
+                  {isMock && (
+                    <p id="mock-banner" className="banner">
+                      Mock mode: showing sample games. Add your BGG token to <code>.env</code> for real data.
+                    </p>
+                  )}
+                </>
               )}
             </>
           )}

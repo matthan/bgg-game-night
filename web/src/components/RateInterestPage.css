@@ -1,0 +1,113 @@
+/* "Rate games" page: filters, then a grid of game cards with a row of dice each. */
+.rate-page { margin-top: 32px; }
+.rate-header { text-align: center; margin-bottom: 24px; }
+.rate-header h1 { margin: 0 0 8px; font-size: clamp(40px, 9vw, 60px); line-height: 1; }
+.rate-header p { margin: 0 auto; max-width: 560px; }
+
+.rate-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+.rate-filters input[type="search"] { flex: 1 1 220px; max-width: 360px; }
+.rate-filters select { flex: 0 1 220px; }
+.rate-unrated { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.rate-unrated input { width: 16px; height: 16px; margin: 0; }
+.rate-count { text-align: center; margin: 14px 0 18px; font-size: 14px; }
+
+.rate-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 16px;
+}
+.rate-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+/* box art: a fixed-height strip, kept to the top of the image (titles live there) */
+.rate-cover {
+  position: relative;
+  flex: none;
+  aspect-ratio: 4 / 3;
+  overflow: hidden; /* the image fills this frame; its own (tall) size mustn't stretch it */
+  background: linear-gradient(160deg, var(--surface), var(--bg));
+}
+.rate-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.rate-placeholder { display: grid; place-items: center; height: 100%; font-size: 3rem; }
+
+.rate-body { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 12px; flex: 1; }
+.rate-name {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  line-height: 1.05;
+  color: var(--text);
+  text-decoration: none;
+}
+.rate-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.rate-name .external-icon { margin-left: 5px; font-size: 0.55em; vertical-align: 0.25em; opacity: 0.7; }
+.rate-stats { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 12px; }
+/* admin only: a small "Hide" link at the right of the players line */
+.rate-hide {
+  padding: 1px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--field);
+  color: var(--muted);
+}
+.rate-hide:hover { background: var(--error); color: #fff; }
+.rate-hidden-msg { margin: 0 0 14px; }
+
+/* the dice: no opinion, then six pips … one pip. Dimmed until chosen. */
+.rate-dice { display: flex; justify-content: space-between; gap: 2px; margin-top: auto; padding-top: 4px; }
+.rate-die {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0.4;
+  filter: saturate(0.7);
+  transition: opacity 0.15s, filter 0.15s, transform 0.15s, background 0.15s;
+}
+.rate-die:hover { opacity: 0.85; filter: none; }
+/* the chosen die: full color and noticeably bigger (no border) */
+.rate-die.chosen {
+  position: relative;
+  z-index: 1; /* sits over its neighbours as it grows */
+  opacity: 1;
+  filter: none;
+  transform: scale(1.45);
+}
+.rate-die:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.rate-level {
+  font-family: var(--font-heading);
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.rate-card.unrated .rate-level { opacity: 0.7; }
+.rate-more { height: 1px; }
+
+@media (max-width: 480px) {
+  .rate-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .rate-die { width: 22px; height: 26px; font-size: 16px; }
+  .rate-body { padding: 8px 8px 10px; }
+}

@@ -1,27 +1,4 @@
-import type { CollectionResponse, FilterState, Game, OwnedGame, WeightClass } from "./types";
-
-/**
- * Weight buckets, lightest first. A game belongs to the first bucket whose
- * `below` is greater than its weight. Change the cut-offs here and the
- * filter dropdown labels update automatically.
- */
-export const WEIGHT_CLASSES: { id: WeightClass; label: string; below: number }[] = [
-  { id: "light", label: "Light", below: 1.5 },
-  { id: "medium-light", label: "Medium Light", below: 2.0 },
-  { id: "medium", label: "Medium", below: 2.6 },
-  { id: "medium-heavy", label: "Medium Heavy", below: 3.5 },
-  { id: "heavy", label: "Heavy", below: Infinity },
-];
-
-/** Which weight bucket a game falls in (null if BGG has no weight votes). */
-export function weightClass(weight: number | null): WeightClass | null {
-  if (weight === null) return null;
-  return WEIGHT_CLASSES.find((c) => weight < c.below)!.id;
-}
-
-export function weightLabel(id: WeightClass): string {
-  return WEIGHT_CLASSES.find((c) => c.id === id)!.label;
-}
+import type { CollectionResponse, FilterState, Game, InterestBoost, InterestSummary, OwnedGame } from "./types";
 
 /** [2, 3, 4, 6] -> "2–4, 6" */
 export function formatCounts(counts: number[]): string {
@@ -53,14 +30,6 @@ export function filterGames<T extends Game>(games: T[], f: FilterState): T[] {
       }
     }
 
-    if (f.maxTime !== null) {
-      const time = g.minPlayTime ?? g.playingTime;
-      if (time !== null && time > f.maxTime) return false;
-    }
-
-    // Games with no weight data are left out when a weight is chosen.
-    if (f.weight !== null && weightClass(g.weight) !== f.weight) return false;
-
     return true;
   });
 }
@@ -91,7 +60,39 @@ export function sampleRandom<T>(items: T[], n: number): T[] {
   return copy.slice(0, n);
 }
 
-export function pickRandom<T>(items: T[]): T | null {
-  if (items.length === 0) return null;
-  return items[Math.floor(Math.random() * items.length)];
+/**
+ * How likely a game is to be picked, from everyone's average interest in it.
+ *
+ *   weight = 2 ^ (strength × (average − 2.5))
+ *
+ * average: 0 = rather not … 5 = yes, please!  (2.5 is neutral)
+ * strength: off 0 · gentle 1 · strong 2 ("strong" doubles the effect)
+ *
+ * Gentle: averaging "Yes, please!" ≈ 5.7×, "Sure thing" ≈ 1.4×, "Slightly"
+ * ≈ 0.7×, "Rather not" ≈ 0.18×. Games nobody has rated count as neutral (1×).
+ */
+export const INTEREST_STRENGTH: Record<InterestBoost, number> = { off: 0, gentle: 1, strong: 2 };
+
+export function interestWeight(average: number | undefined, boost: InterestBoost): number {
+  if (average === undefined) return 1;
+  return 2 ** (INTEREST_STRENGTH[boost] * (average - 2.5));
+}
+
+/**
+ * Up to `n` items without repeats, where an item with weight 2 is twice as
+ * likely to be picked as one with weight 1. (Each item gets a random key
+ * u^(1/weight) and the n largest keys win: Efraimidis–Spirakis.)
+ */
+export function sampleWeighted<T>(items: T[], n: number, weight: (item: T) => number): T[] {
+  return items
+    .map((item) => ({ item, key: Math.random() ** (1 / Math.max(weight(item), 1e-9)) }))
+    .sort((a, b) => b.key - a.key)
+    .slice(0, n)
+    .map((x) => x.item);
+}
+
+/** Pick games for a list: random, but favouring well-liked ones as `boost` says. */
+export function pickGames<T extends Game>(games: T[], n: number, summary: InterestSummary, boost: InterestBoost): T[] {
+  if (boost === "off") return sampleRandom(games, n);
+  return sampleWeighted(games, n, (g) => interestWeight(summary[g.id]?.average, boost));
 }

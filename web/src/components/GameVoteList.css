@@ -351,6 +351,34 @@
   .game-vote-list-card:not(.selected) .game-vote-list-caption { opacity: 0; }
   .game-vote-list-name { font-size: 22px; }
 }
+/* ---------- ‹ › beside the open card (desktop) ----------
+   Inside the open card, so they turn and zoom with it: just left of the
+   cover, and just right of it (the cover is wider than the card's slot). */
+.card-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 15px;
+  background: rgba(10, 5, 15, 0.72);
+  color: var(--text);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  translate: 0 -50%;
+  animation: card-arrow-in 0.35s ease 0.2s both; /* appear once the card has opened */
+  transition: background 0.2s, transform 0.15s;
+}
+.card-arrow:hover { background: var(--accent); color: var(--accent-text); transform: scale(1.1); }
+.card-arrow.prev { left: -48px; }
+.card-arrow.next { left: calc(var(--cover-w) + 12px); }
+@keyframes card-arrow-in { from { opacity: 0; } to { opacity: 1; } }
+/* the vertical (phone) layout lists every game down the page: no arrows there */
+@media (max-width: 1023px) { .card-arrow { display: none; } }
+
 /* ---------- opening animation (GameVoteList.tsx sets the timing variables) ---------- */
 /* each card fades in, sliding in from the right while swinging round on its
    vertical axis (rotateY), one after another; uses `transform`, which the

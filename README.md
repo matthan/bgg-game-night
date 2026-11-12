@@ -73,11 +73,23 @@ are kept as history.
 
 When the admin **hides** a game, it leaves the results everywhere and its spot
 in the list is filled with another random game that fits the list's filters
-(Undo puts it back).
+(Undo puts it back). **Replace** does the same swap but doesn't hide the game,
+so it can still come up in future lists.
+
+**Favouring well-liked games:** picking is random, but the filters' "Favour
+well-liked games" switch (Off / Gentle / Strong, saved with the list) gives
+games a better or worse chance from everyone's average interest:
+`chance = 2 ^ (strength × (average − 2.5))`, with average 0 (rather not) to
+5 (yes, please!) and strength 0 / 1 / 2. On Gentle, a game averaging "Yes,
+please!" is about 5.7× as likely as an unrated one and one averaging "Rather
+not" about 0.18×; Strong doubles that. Replacements (Hide / Replace) use the
+same setting. The maths is in `interestWeight()` in `web/src/filterGames.ts`.
 
 **Browsing the list:** click (or tap) a card to open it: it turns to face you
 and the others blur. Click it again, click elsewhere or press Escape to go
-back to the fan.
+back to the fan. On desktop, the ‹ › buttons beside the open card (or the ← →
+keys) step to the previous / next game; there's no ‹ on the first game and no
+› on the last.
 On screens narrower than 1024px (phones, tablets) the fan runs down the page:
 each card shows the top of its box art, the selected card opens to full
 height, and cards you voted for slide to the right. The interest slider sits in
@@ -103,6 +115,17 @@ drag the **Rate your interest** slider (far left = no opinion); it saves a
 moment after you stop. Each card shows everyone's dice. The labels, dice and colors live in `web/src/interest.ts`.
 Unlike votes, interest is kept permanently per person per game
 (`game_interest` table), so it carries over to future lists.
+
+## Rate games page
+
+**Rate games** (top right; not for guest) opens a page listing every game in
+the loaded collections, except hidden ones, A–Z as a card grid. Each card has
+a row of dice: tap one to set your interest, tap it again to clear it. Filters:
+name search, **Unrated only** (games you rate stay visible until you change a
+filter) and one collection. Cards load in batches as you scroll. The page lives
+at `#rate`, so the browser's back button works. Your ratings come from
+`GET /api/interest/mine` and are saved with the same `PUT /api/interest/:gameId`
+as the slider.
 
 ## Adding games by hand
 
@@ -145,6 +168,8 @@ sample games plus a few extras in `api/mock/catalog.xml`.
 | `POST /api/lists` · `PUT /api/lists/current/games` | Create a list / change its games (admin only) |
 | `PUT`/`DELETE /api/lists/current/games/:id/vote` | Vote / unvote for a game in the current list |
 | `PUT /api/interest/:gameId { level }` · `DELETE /api/interest/:gameId` | Set / clear your interest in a game (level 5 = yes, please! down to 0 = rather not) |
+| `GET /api/interest` | Average interest and number of ratings per game (used to favour well-liked games) |
+| `GET /api/interest/mine` | Your own interest level for every game you've rated (the Rate games page) |
 | `PUT /api/games/:id/hidden` | Hide a game from the results (kept in the database; admin only) |
 | `DELETE /api/games/:id/hidden` | Show a hidden game again |
 | `GET /api/games/hidden` | List hidden games |
@@ -200,7 +225,7 @@ web/
   src/App.tsx               page layout and state
   src/hooks/useCollections.ts  loading, background refresh, manual refresh
   src/api.ts                calls our API
-  src/filterGames.ts        filters, weight groups, merging collections
+  src/filterGames.ts        filters, interest-weighted picking, merging collections
   src/components/           LoginPage, AccountsPanel, AddGamesPanel, CollectionsBar, Filters, GameCarousel, UsernameForm
   nginx.conf                production web server (ZimaOS)
 docker-compose.yml          local development

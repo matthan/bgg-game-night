@@ -185,6 +185,21 @@ test("interest: one level per user per game, clearable, kept across lists", () =
   assert.equal(repo.isInterestLevel(0), true);
 });
 
+test("interest summary: average and count per rated game", () => {
+  const db = openDatabase(":memory:");
+  repo.ensureUser(db, "alice");
+  repo.saveCollection(db, "alice", [game(1, "A"), game(2, "B"), game(3, "C")]);
+  for (const [id, name] of [[1, "matthan"], [2, "sam"]] as const) {
+    db.prepare("INSERT INTO accounts (id, username, password_hash, is_admin, created_at) VALUES (?, ?, 'x', 0, 'now')").run(id, name);
+  }
+  repo.setInterest(db, 1, 1, 5);
+  repo.setInterest(db, 2, 1, 2);
+  repo.setInterest(db, 1, 2, 0);
+  assert.deepEqual(repo.interestSummary(db), { 1: { average: 3.5, count: 2 }, 2: { average: 0, count: 1 } }); // game 3: nobody rated it
+  assert.deepEqual(repo.myInterest(db, 1), { 1: 5, 2: 0 }); // just matthan's own ratings
+  assert.deepEqual(repo.myInterest(db, 2), { 1: 2 });
+});
+
 test("interest import: saves known users/games, skips the rest, deletes the file", async () => {
   const db = openDatabase(":memory:");
   repo.ensureUser(db, "alice");

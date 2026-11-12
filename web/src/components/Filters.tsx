@@ -1,5 +1,10 @@
-import type { FilterState, WeightClass } from "../types";
-import { WEIGHT_CLASSES } from "../filterGames";
+import type { FilterState, InterestBoost } from "../types";
+
+const BOOSTS: { id: InterestBoost; label: string; hint: string }[] = [
+  { id: "off", label: "Off", hint: "Pure random: interest doesn't matter" },
+  { id: "gentle", label: "Gentle", hint: "Games people are keen on come up more often" },
+  { id: "strong", label: "Strong", hint: "Twice the effect: favourites much more likely, disliked games rare" },
+];
 
 interface Props {
   value: FilterState;
@@ -14,8 +19,7 @@ interface Props {
  */
 export function Filters({ value, onChange, disabled = false }: Props) {
   // Helper: copy the current filters and change one field.
-  const set = <K extends keyof FilterState>(key: K, v: FilterState[K]) =>
-    onChange({ ...value, [key]: v });
+  const set = <K extends keyof FilterState>(key: K, v: FilterState[K]) => onChange({ ...value, [key]: v });
 
   return (
     <fieldset id="filters" className="filters" disabled={disabled}>
@@ -64,42 +68,24 @@ export function Filters({ value, onChange, disabled = false }: Props) {
         {!disabled && value.players === null && <span className="hint">Choose a player count first</span>}
       </div>
 
-      <label>
-        Time available
-        <select
-          value={value.maxTime ?? ""}
-          onChange={(e) => set("maxTime", e.target.value ? Number(e.target.value) : null)}
-        >
-          <option value="">Any</option>
-          <option value="20">≤ 20 min</option>
-          <option value="45">≤ 45 min</option>
-          <option value="60">≤ 1 hour</option>
-          <option value="90">≤ 1.5 hours</option>
-          <option value="120">≤ 2 hours</option>
-        </select>
-      </label>
-
-      <label>
-        Weight
-        <select
-          value={value.weight ?? ""}
-          onChange={(e) => set("weight", (e.target.value || null) as WeightClass | null)}
-        >
-          <option value="">Any</option>
-          {WEIGHT_CLASSES.map((c, i) => {
-            const from = WEIGHT_CLASSES[i - 1]?.below;
-            const range =
-              from === undefined ? `under ${c.below.toFixed(1)}`
-              : c.below === Infinity ? `${from.toFixed(1)} and up`
-              : `${from.toFixed(1)}–${c.below.toFixed(1)}`;
-            return (
-              <option key={c.id} value={c.id}>
-                {c.label} ({range})
-              </option>
-            );
-          })}
-        </select>
-      </label>
+      {/* Favour games people are keen on (their average "Rate your interest"). */}
+      <div className="filter-group interest-boost" role="radiogroup" aria-label="Favour well-liked games">
+        <span className="filter-label">Favour well-liked games</span>
+        <div className="segmented">
+          {BOOSTS.map((b) => (
+            <label key={b.id} className={value.interestBoost === b.id ? "on" : ""} title={b.hint}>
+              <input
+                type="radio"
+                name="interest-boost"
+                value={b.id}
+                checked={value.interestBoost === b.id}
+                onChange={() => set("interestBoost", b.id)}
+              />
+              {b.label}
+            </label>
+          ))}
+        </div>
+      </div>
     </fieldset>
   );
 }

@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpRightFromSquare, faThumbsUp } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUpRightFromSquare, faChevronLeft, faChevronRight, faThumbsUp } from "@fortawesome/free-solid-svg-icons";
 import type { ListGame, OwnedGame } from "../types";
 import { interestInfo, showInInterest } from "../interest";
 import { formatCounts } from "../filterGames";
@@ -17,6 +17,9 @@ interface Props {
   onSelect: () => void; // click / Enter / Space on the cover
   onToggleVote?: (game: ListGame) => void; // the 👍 button
   cardRef?: (el: HTMLDivElement | null) => void; // GameVoteList measures the cards (see placeTitle)
+  // open card only: the ‹ › buttons beside it (left out at the ends of the list)
+  onPrev?: () => void;
+  onNext?: () => void;
 }
 
 const bggUrl = (id: number) => `https://boardgamegeek.com/boardgame/${id}`;
@@ -27,7 +30,7 @@ function formatPlayers(g: OwnedGame) {
 }
 
 /** "2–5 (3)": player count, then the counts BGG voters say are best, in brackets. */
-function formatPlayersAndBest(g: OwnedGame) {
+export function formatPlayersAndBest(g: OwnedGame) {
   return g.bestWith.length ? `${formatPlayers(g)} (${formatCounts(g.bestWith)})` : formatPlayers(g);
 }
 
@@ -40,7 +43,7 @@ function formatPlayersAndBest(g: OwnedGame) {
  * keep them as they are. The Hide button and the interest slider are NOT part
  * of the card: GameVoteList renders them once and lines them up with the open card.
  */
-export function GameCard({ game: g, index, selected, me, onSelect, onToggleVote, cardRef }: Props) {
+export function GameCard({ game: g, index, selected, me, onSelect, onToggleVote, cardRef, onPrev, onNext }: Props) {
   const votes = g.votes ?? [];
   const iVoted = !!me && votes.includes(me);
   const interest = (g.interest ?? []).filter((it) => showInInterest(it.username));
@@ -108,6 +111,23 @@ export function GameCard({ game: g, index, selected, me, onSelect, onToggleVote,
           </span>
         </span>
       </div>
+      {/* ‹ › beside the open card: same as the ← → keys (none past either end) */}
+      {selected && onPrev && (
+        <button
+          type="button"
+          className="card-arrow prev"
+          onClick={onPrev}
+          aria-label="Previous game"
+          title="Previous game"
+        >
+          <FontAwesomeIcon icon={faChevronLeft} aria-hidden />
+        </button>
+      )}
+      {selected && onNext && (
+        <button type="button" className="card-arrow next" onClick={onNext} aria-label="Next game" title="Next game">
+          <FontAwesomeIcon icon={faChevronRight} aria-hidden />
+        </button>
+      )}
       {onToggleVote && g.votes && (
         <button
           type="button"

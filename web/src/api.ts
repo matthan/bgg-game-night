@@ -6,6 +6,7 @@ import type {
   GameList,
   Interest,
   InterestLevel,
+  InterestSummary,
   SavedUser,
   SearchHit,
 } from "./types";
@@ -62,6 +63,12 @@ export const updateListGames = (gameIds: number[]) =>
 /** Vote for a game in the current list (or take the vote back). */
 export const setVote = (gameId: number, voted: boolean) =>
   request<GameList>(`/api/lists/current/games/${gameId}/vote`, { method: voted ? "PUT" : "DELETE" });
+
+/** Everyone's average interest per game (to favour well-liked games when picking). */
+export const getInterestSummary = () => request<InterestSummary>("/api/interest");
+
+/** Your own interest level for every game you've rated: { gameId: level } (the "Rate games" page). */
+export const getMyInterest = () => request<Record<number, InterestLevel>>("/api/interest/mine");
 
 /** Set your interest in a game (null = back to "no opinion"). Returns everyone's interest in it. */
 export const setInterest = (gameId: number, level: InterestLevel | null) =>

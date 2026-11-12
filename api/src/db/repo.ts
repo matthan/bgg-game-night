@@ -459,6 +459,30 @@ export interface Interest {
 }
 
 /** Everyone's interest in these games: { gameId -> [{ username, level }] }. No row = no opinion. */
+/** One person's interest level for every game they've rated: { gameId: level }. */
+export function myInterest(db: DatabaseSync, accountId: number): Record<number, InterestLevel> {
+  const out: Record<number, InterestLevel> = {};
+  for (const r of db.prepare("SELECT game_id, level FROM game_interest WHERE account_id = ?").all(accountId) as any[]) {
+    out[Number(r.game_id)] = Number(r.level) as InterestLevel;
+  }
+  return out;
+}
+
+/**
+ * Average interest per game, over everyone who rated it (no opinion = not
+ * counted). Used to give better-liked games a better chance in new lists.
+ * Returns { gameId: { average: 0–5, count } } for every rated game.
+ */
+export function interestSummary(db: DatabaseSync): Record<number, { average: number; count: number }> {
+  const out: Record<number, { average: number; count: number }> = {};
+  for (const r of db
+    .prepare("SELECT game_id, AVG(level) AS average, COUNT(*) AS count FROM game_interest GROUP BY game_id")
+    .all() as any[]) {
+    out[Number(r.game_id)] = { average: Math.round(Number(r.average) * 100) / 100, count: Number(r.count) };
+  }
+  return out;
+}
+
 export function getInterest(db: DatabaseSync, gameIds: number[]): Map<number, Interest[]> {
   const out = new Map<number, Interest[]>();
   for (const r of db

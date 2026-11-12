@@ -16,6 +16,7 @@ interface Props {
   games: BoardGame[];
   showOwners?: boolean; // (not shown by the fan any more)
   onToggleHidden?: (game: OwnedGame) => void; // Hide / Unhide button (admin only)
+  onReplace?: (game: OwnedGame) => void; // Replace button: swap for another match, not hidden (admin only)
   me?: string; // signed-in username, to show whether *you* voted
   onToggleVote?: (game: ListGame) => void; // vote button on each card
   members?: string[]; // everyone who can sign in (not used by the fan any more)
@@ -47,7 +48,7 @@ const INTRO_CARD_MS = 750; // each card's own animation
  * The selection is stored by POSITION, so when a game is hidden and another
  * fills its spot, the new game is selected in its place.
  */
-export function GameVoteList({ games, onToggleHidden, me, onToggleVote, onSetInterest }: Props) {
+export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVote, onSetInterest }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   // true during the opening animation; cards added later (e.g. after a Hide) just appear
   const [intro, setIntro] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -65,7 +66,9 @@ export function GameVoteList({ games, onToggleHidden, me, onToggleVote, onSetInt
   // Click outside the fan (and its info line) or press Escape to deselect.
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setSelected(null);
+      // composedPath: where the click happened, even if that element has since
+      // been removed (e.g. the ‹ › button, which moves to the next card)
+      if (rootRef.current && !e.composedPath().includes(rootRef.current)) setSelected(null);
     };
     const onKey = (e: globalThis.KeyboardEvent) => e.key === "Escape" && setSelected(null);
     document.addEventListener("click", onClick);
@@ -232,15 +235,20 @@ export function GameVoteList({ games, onToggleHidden, me, onToggleVote, onSetInt
               cardRef={(el) => {
                 cardRefs.current[i] = el;
               }}
+              onPrev={i > 0 ? () => setSelected(i - 1) : undefined} // no ‹ on the first game
+              onNext={i < games.length - 1 ? () => setSelected(i + 1) : undefined} // no › on the last
             />
           ))}
         </div>
 
-        {/* Under the selected card: the Hide button (admin only).
+        {/* Under the selected card: Hide and Replace (admin only).
           With nothing selected, the first game's is rendered INVISIBLY, so the
           space is always reserved and the page below doesn't jump on hover. */}
         {shown && onToggleHidden && (
-          <div className={`game-vote-list-info${active ? "" : " is-placeholder"}`} aria-hidden={active ? undefined : true}>
+          <div
+            className={`game-vote-list-info${active ? "" : " is-placeholder"}`}
+            aria-hidden={active ? undefined : true}
+          >
             <div className="game-vote-list-title" ref={titleRef}>
               <button
                 type="button"
@@ -255,6 +263,17 @@ export function GameVoteList({ games, onToggleHidden, me, onToggleVote, onSetInt
               >
                 {shown.hidden ? "Unhide" : "Hide"}
               </button>
+              {onReplace && !shown.hidden && (
+                <button
+                  type="button"
+                  className="hide-button replace-button"
+                  onClick={() => onReplace(shown)}
+                  aria-label={`Replace ${shown.name} with another random match`}
+                  title="Swap this game for another random match (it isn't hidden, so it can come up again)"
+                >
+                  Replace
+                </button>
+              )}
             </div>
           </div>
         )}

@@ -8,9 +8,21 @@ import * as repo from "../db/repo.js";
  *   PUT    /api/interest/:gameId { level: 0..5 } -> set it
  *   DELETE /api/interest/:gameId                  -> back to "no opinion"
  * Both answer with everyone's interest in that game.
+ *   GET    /api/interest -> { gameId: { average, count } } for every rated game
+ *                           (used to favour well-liked games in new lists)
+ *   GET    /api/interest/mine -> { gameId: level } for every game YOU rated
+ *                                (the "Rate games" page)
  */
 export function interestRouter({ db }: { db: DatabaseSync }) {
   const router = Router();
+
+  router.get("/", (_req, res) => {
+    res.json(repo.interestSummary(db));
+  });
+
+  router.get("/mine", (req, res) => {
+    res.json(repo.myInterest(db, req.account!.id));
+  });
 
   router.put("/:gameId", (req, res) => {
     const level = req.body?.level;
