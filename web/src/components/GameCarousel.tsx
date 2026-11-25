@@ -14,6 +14,7 @@ interface Props {
   onReplace?: (game: OwnedGame) => void; // not shown in the slideshow (see GameVoteList)
   me?: string; // voting isn't shown in the slideshow (see GameVoteList)
   onToggleVote?: (game: never) => void;
+  onToggleVeto?: (game: never) => void; // vetoes aren't shown in the slideshow either
   members?: string[]; // interest isn't shown in the slideshow either
 }
 

@@ -58,6 +58,7 @@ export interface Interest {
 /** A game in the shared list, with who voted for it and everyone's interest. */
 export interface ListGame extends OwnedGame {
   votes: string[]; // usernames, in the order they voted
+  vetoes: string[]; // usernames that vetoed it (each person has one veto per list)
   interest: Interest[]; // keenest first
 }
 

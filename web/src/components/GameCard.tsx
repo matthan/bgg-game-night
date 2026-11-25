@@ -1,13 +1,13 @@
 import type { CSSProperties } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpRightFromSquare, faThumbsUp } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUpRightFromSquare, faBan, faThumbsUp } from "@fortawesome/free-solid-svg-icons";
 import type { ListGame, OwnedGame } from "../types";
 import { interestInfo, showInInterest } from "../interest";
 import { formatCounts } from "../filterGames";
 import { Die } from "./Die";
 
 /** A game as GameVoteList gets it: votes and interest are there when it's from the shared list. */
-export type BoardGame = OwnedGame & Partial<Pick<ListGame, "votes" | "interest">>;
+export type BoardGame = OwnedGame & Partial<Pick<ListGame, "votes" | "vetoes" | "interest">>;
 
 interface Props {
   game: BoardGame;
@@ -16,6 +16,8 @@ interface Props {
   me?: string; // signed-in username, to show whether *you* voted
   onSelect: () => void; // click / Enter / Space on the cover
   onToggleVote?: (game: ListGame) => void; // the 👍 button
+  onToggleVeto?: (game: ListGame) => void; // the 🚫 button
+  myVetoElsewhere?: boolean; // you've vetoed ANOTHER game in the list (one veto each)
   cardRef?: (el: HTMLDivElement | null) => void; // GameVoteList measures the cards (see placeTitle)
 }
 
@@ -40,15 +42,22 @@ export function formatPlayersAndBest(g: OwnedGame) {
  * keep them as they are. The Hide button and the interest slider are NOT part
  * of the card: GameVoteList renders them once and lines them up with the open card.
  */
-export function GameCard({ game: g, index, selected, me, onSelect, onToggleVote, cardRef }: Props) {
+export function GameCard({ game: g, index, selected, me, onSelect, onToggleVote, onToggleVeto, myVetoElsewhere, cardRef }: Props) {
   const votes = g.votes ?? [];
   const iVoted = !!me && votes.includes(me);
+  const vetoes = g.vetoes ?? [];
+  const iVetoed = !!me && vetoes.includes(me);
+  // Your 🚫 is on every card until you veto one; then only that card keeps it.
+  // A card someone ELSE vetoed still shows its 🚫 (with the count), just not
+  // clickable for you.
+  const vetoLocked = !!myVetoElsewhere && !iVetoed;
+  const showVeto = !!onToggleVeto && !!g.vetoes && (!vetoLocked || vetoes.length > 0);
   const interest = (g.interest ?? []).filter((it) => showInInterest(it.username));
 
   return (
     <div
       ref={cardRef}
-      className={`game-vote-list-card${selected ? " selected" : ""}${g.hidden ? " is-hidden" : ""}${iVoted ? " my-vote" : ""}`}
+      className={`game-vote-list-card${selected ? " selected" : ""}${g.hidden ? " is-hidden" : ""}${iVoted ? " my-vote" : ""}${vetoes.length ? " vetoed" : ""}`}
       style={{ "--i": index } as CSSProperties} // its place in the opening animation
     >
       {/* The cover: click = select. A div acting as a button (not a <button>),
@@ -110,6 +119,34 @@ export function GameCard({ game: g, index, selected, me, onSelect, onToggleVote,
           </span>
         </span>
       </div>
+      {showVeto && (
+        <button
+          type="button"
+          className={`vote-button veto-button${iVetoed ? " voted" : ""}${vetoes.length > 0 ? " has-votes" : ""}`}
+          onClick={() => onToggleVeto!(g as ListGame)}
+          disabled={vetoLocked}
+          aria-pressed={iVetoed}
+          aria-label={
+            vetoLocked
+              ? `${g.name} vetoed by ${vetoes.join(", ")} (you've used your veto on another game)`
+              : `${iVetoed ? "Take back your veto of" : "Veto"} ${g.name}${vetoes.length ? ` (vetoed by ${vetoes.join(", ")})` : ""}`
+          }
+          title={
+            vetoes.length
+              ? `Vetoed by ${vetoes.join(", ")}${vetoLocked ? " (you've used your veto)" : ""}`
+              : "Veto this game (one veto per list)"
+          }
+        >
+          <FontAwesomeIcon icon={faBan} aria-hidden />
+          {/* slides out on hover */}
+          {!vetoLocked && (
+            <span className="vote-label" aria-hidden>
+              {iVetoed ? "Vetoed" : "Veto"}
+            </span>
+          )}
+          {vetoes.length > 0 && <span className="vote-count">{vetoes.length}</span>}
+        </button>
+      )}
       {onToggleVote && g.votes && (
         <button
           type="button"

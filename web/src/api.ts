@@ -64,6 +64,11 @@ export const updateListGames = (gameIds: number[]) =>
 export const setVote = (gameId: number, voted: boolean) =>
   request<GameList>(`/api/lists/current/games/${gameId}/vote`, { method: voted ? "PUT" : "DELETE" });
 
+/** Veto a game in the current list (or take the veto back). One per person: vetoing
+ * another game moves it there; vetoing also takes back your vote for that game. */
+export const setVeto = (gameId: number, vetoed: boolean) =>
+  request<GameList>(`/api/lists/current/games/${gameId}/veto`, { method: vetoed ? "PUT" : "DELETE" });
+
 /** Everyone's average interest per game (to favour well-liked games when picking). */
 export const getInterestSummary = () => request<InterestSummary>("/api/interest");
 

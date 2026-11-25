@@ -158,6 +158,48 @@ test("votes: per account, cleared by a new list, removed with a swapped-out game
   assert.equal(Number((db.prepare("SELECT COUNT(*) n FROM list_votes").get() as any).n), 0);
 });
 
+test("vetoes: one per account, moving it, vote and veto exclude each other, cleared like votes", () => {
+  const db = openDatabase(":memory:");
+  repo.ensureUser(db, "alice");
+  repo.saveCollection(db, "alice", [game(1, "A"), game(2, "B"), game(3, "C")]);
+  for (const [id, name] of [[1, "matthan"], [2, "sam"]] as const) {
+    db.prepare("INSERT INTO accounts (id, username, password_hash, is_admin, created_at) VALUES (?, ?, 'x', 0, 'now')").run(id, name);
+  }
+  assert.equal(repo.setVeto(db, 1, 1, true), false); // no list yet
+  repo.createList(db, {}, [1, 2, 3], 1);
+  const listId = () => repo.getCurrentList(db)!.id;
+  const vetoes = () => Object.fromEntries(repo.getListVetoes(db, listId()));
+  assert.equal(repo.setVeto(db, 1, 99, true), false); // not in the list
+
+  repo.setVote(db, 1, 1, true);
+  repo.setVeto(db, 1, 1, true); // vetoing takes your vote for it back
+  assert.deepEqual(vetoes(), { 1: ["matthan"] });
+  assert.equal(repo.getListVotes(db, listId()).get(1), undefined);
+
+  repo.setVeto(db, 1, 2, true); // one veto per person: it moves
+  repo.setVeto(db, 2, 2, true); // someone else can veto the same game
+  assert.deepEqual(vetoes(), { 2: ["matthan", "sam"] });
+
+  repo.setVeto(db, 1, 3, false); // taking back a veto you don't have there does nothing
+  assert.deepEqual(vetoes(), { 2: ["matthan", "sam"] });
+
+  repo.setVote(db, 2, 2, true); // voting for the game you vetoed takes the veto back
+  assert.deepEqual(vetoes(), { 2: ["matthan"] });
+  assert.deepEqual(repo.getListVotes(db, listId()).get(2), ["sam"]);
+
+  repo.setVeto(db, 1, 2, false);
+  assert.deepEqual(vetoes(), {});
+
+  repo.setVeto(db, 1, 3, true);
+  repo.updateCurrentListGames(db, [1, 2]); // game 3 swapped out -> its veto goes
+  assert.deepEqual(vetoes(), {});
+
+  repo.setVeto(db, 2, 1, true);
+  repo.createList(db, {}, [1, 2], 1); // new list -> no vetoes at all
+  assert.deepEqual(vetoes(), {});
+  assert.equal(Number((db.prepare("SELECT COUNT(*) n FROM list_vetoes").get() as any).n), 0);
+});
+
 test("interest: one level per user per game, clearable, kept across lists", () => {
   const db = openDatabase(":memory:");
   repo.ensureUser(db, "alice");

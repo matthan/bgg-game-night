@@ -194,4 +194,19 @@ export const migrations: { version: number; name: string; sql: string }[] = [
       CREATE INDEX game_interest_game ON game_interest(game_id);
     `,
   },
+  {
+    version: 10,
+    name: "vetoes on the current list",
+    sql: `
+      -- Each account can veto ONE game per list (the primary key); vetoing
+      -- another game moves the veto. Cleared with the list's votes.
+      CREATE TABLE list_vetoes (
+        list_id    INTEGER NOT NULL REFERENCES game_lists(id) ON DELETE CASCADE,
+        account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        game_id    INTEGER NOT NULL,
+        vetoed_at  TEXT NOT NULL,
+        PRIMARY KEY (list_id, account_id)
+      );
+    `,
+  },
 ];

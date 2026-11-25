@@ -12,6 +12,7 @@
   --slot-open: 196px;   /* selected card's space */
   --cover-w: 236px;
   --cover-h: 320px;
+  --veto: #d9363e;      /* the 🚫 button once it's yours */
   margin-top: 24px;
 }
 
@@ -37,6 +38,8 @@
 }
 /* cards YOU voted for sit higher than the rest (selected or not) */
 .game-vote-list-card.my-vote { translate: 0 -42px; }
+/* vetoed cards (by anyone) sit LOWER, however many votes they have */
+.game-vote-list-card.vetoed { translate: 0 42px; }
 /* the cover acts as a button (click = select); no button look */
 .game-vote-list-select {
   all: unset;
@@ -198,6 +201,18 @@
 /* when the card faces forward, move the button to the cover's real top-right corner */
 .game-vote-list-card.selected .vote-button { right: calc(var(--slot-open) - var(--cover-w) + 10px); }
 
+/* 🚫 veto: the same button mirrored into the top-LEFT corner (the "Veto" label
+   slides out to the right). Red once it's yours; on a card someone else
+   vetoed it shows a red icon and the count, and it's disabled once you've
+   used your veto elsewhere. (Extra class in the selectors so these win over
+   the .vote-button position rules, including the phone ones.) */
+.game-vote-list-card .vote-button.veto-button { left: 8px; right: auto; transition: left var(--fan-speed) var(--fan-ease), top var(--fan-speed) var(--fan-ease), background 0.2s, transform 0.15s; }
+.game-vote-list-card.selected .vote-button.veto-button { left: 10px; right: auto; }
+.veto-button.has-votes:not(.voted) { color: var(--veto); }
+.vote-button.veto-button.voted { background: var(--veto); color: #fff; }
+.vote-button.veto-button:disabled { cursor: default; }
+.vote-button.veto-button:disabled:hover { transform: none; }
+
 
 .game-vote-list-info { margin-top: 4px; min-height: 1.6em; transition: opacity 0.35s ease, visibility 0.35s; }
 /* nothing selected: the Hide / Replace row keeps its size but shows nothing */
@@ -226,15 +241,15 @@
   .game-vote-list {
     --row: 76px;        /* visible strip of each card */
     --cover-h: 210px;   /* a card's full height (shorter than on desktop) */
-    --shift: 40px;      /* how far a card slides sideways (voted: right) */
+    --shift: 40px;      /* how far a card slides sideways (voted: right, vetoed: left) */
     --card-max: 400px;  /* widest a card gets */
     margin-top: 12px;
   }
   /* The list is centered: a column as wide as a card plus a --shift lane on
      EACH side, never wider than the page (whose padding keeps it 30px from the
      screen's edges). Cards sit in the middle, so an unshifted card is centered
-     on the page; a voted card slides into the right lane, and a card shifted
-     left (translate: calc(-1 * var(--shift)) 0) would use the left one. */
+     on the page; a voted card slides into the right lane, a vetoed one into
+     the left lane. */
   .game-vote-list-cards {
     flex-direction: column;
     align-items: center;
@@ -255,6 +270,7 @@
     height: calc(var(--row) - (var(--cover-h) - var(--row)) / max(var(--intro-count) - 1, 1));
   }
   .game-vote-list-card.my-vote { translate: var(--shift) 0; }
+  .game-vote-list-card.vetoed { translate: calc(-1 * var(--shift)) 0; } /* vetoed: into the left lane */
   .game-vote-list-select { perspective: 900px; }
   .game-vote-list-cover {
     width: 100%;
