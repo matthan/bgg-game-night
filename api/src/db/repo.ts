@@ -423,8 +423,9 @@ export function createList(db: DatabaseSync, filters: unknown, gameIds: number[]
     const { lastInsertRowid } = db
       .prepare("INSERT INTO game_lists (filters, game_ids, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
       .run(JSON.stringify(filters), JSON.stringify(gameIds), accountId, ts, ts);
-    // A new list starts with no votes: erase the votes from earlier lists.
+    // A new list starts with no votes or vetoes: erase those from earlier lists.
     db.prepare("DELETE FROM list_votes WHERE list_id <> ?").run(lastInsertRowid);
+    db.prepare("DELETE FROM list_vetoes WHERE list_id <> ?").run(lastInsertRowid);
   });
 }
 
@@ -438,10 +439,12 @@ export function updateCurrentListGames(db: DatabaseSync, gameIds: number[]): boo
       now(),
       current.id,
     );
-    // Votes for games that left the list (e.g. hidden ones) go with them.
-    db.prepare(
-      "DELETE FROM list_votes WHERE list_id = ? AND game_id NOT IN (SELECT value FROM json_each(?))",
-    ).run(current.id, JSON.stringify(gameIds));
+    // Votes and vetoes for games that left the list (e.g. hidden ones) go with them.
+    for (const table of ["list_votes", "list_vetoes"]) {
+      db.prepare(
+        `DELETE FROM ${table} WHERE list_id = ? AND game_id NOT IN (SELECT value FROM json_each(?))`,
+      ).run(current.id, JSON.stringify(gameIds));
+    }
   });
   return true;
 }
@@ -565,20 +568,75 @@ export function getListVotes(db: DatabaseSync, listId: number): Map<number, stri
   return votes;
 }
 
-/** Vote (or take the vote back) for a game in the current list. False if it isn't in the list. */
+/** Vote (or take the vote back) for a game in the current list. False if it isn't in the list.
+ * Voting for the game you vetoed takes the veto back. */
 export function setVote(db: DatabaseSync, accountId: number, gameId: number, voted: boolean): boolean {
   const current = getCurrentList(db);
   if (!current || !current.gameIds.includes(gameId)) return false;
   if (voted) {
-    db.prepare(
-      `INSERT INTO list_votes (list_id, game_id, account_id, voted_at) VALUES (?, ?, ?, ?)
-       ON CONFLICT DO NOTHING`,
-    ).run(current.id, gameId, accountId, now());
+    transaction(db, () => {
+      db.prepare(
+        `INSERT INTO list_votes (list_id, game_id, account_id, voted_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT DO NOTHING`,
+      ).run(current.id, gameId, accountId, now());
+      db.prepare("DELETE FROM list_vetoes WHERE list_id = ? AND account_id = ? AND game_id = ?").run(
+        current.id,
+        accountId,
+        gameId,
+      );
+    });
   } else {
     db.prepare("DELETE FROM list_votes WHERE list_id = ? AND game_id = ? AND account_id = ?").run(
       current.id,
       gameId,
       accountId,
+    );
+  }
+  return true;
+}
+
+// ---------- vetoes on the current list (one per account) ----------
+
+/** Who vetoed each game in a list: { gameId -> [usernames, in vetoing order] }. */
+export function getListVetoes(db: DatabaseSync, listId: number): Map<number, string[]> {
+  const vetoes = new Map<number, string[]>();
+  for (const r of db
+    .prepare(
+      `SELECT v.game_id, a.username FROM list_vetoes v JOIN accounts a ON a.id = v.account_id
+        WHERE v.list_id = ? ORDER BY v.vetoed_at, a.username`,
+    )
+    .all(listId) as any[]) {
+    vetoes.set(Number(r.game_id), [...(vetoes.get(Number(r.game_id)) ?? []), r.username]);
+  }
+  return vetoes;
+}
+
+/**
+ * Veto a game in the current list (or take the veto back). False if it isn't
+ * in the list. You have ONE veto per list: vetoing a game moves your veto there
+ * from wherever it was, and takes back your vote for that game.
+ */
+export function setVeto(db: DatabaseSync, accountId: number, gameId: number, vetoed: boolean): boolean {
+  const current = getCurrentList(db);
+  if (!current || !current.gameIds.includes(gameId)) return false;
+  if (vetoed) {
+    transaction(db, () => {
+      db.prepare(
+        `INSERT INTO list_vetoes (list_id, account_id, game_id, vetoed_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT (list_id, account_id) DO UPDATE SET game_id = excluded.game_id, vetoed_at = excluded.vetoed_at`,
+      ).run(current.id, accountId, gameId, now());
+      db.prepare("DELETE FROM list_votes WHERE list_id = ? AND game_id = ? AND account_id = ?").run(
+        current.id,
+        gameId,
+        accountId,
+      );
+    });
+  } else {
+    // only takes it back if your veto is on THIS game
+    db.prepare("DELETE FROM list_vetoes WHERE list_id = ? AND account_id = ? AND game_id = ?").run(
+      current.id,
+      accountId,
+      gameId,
     );
   }
   return true;

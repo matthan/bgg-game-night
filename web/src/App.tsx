@@ -9,6 +9,7 @@ import {
   logout,
   setGameHidden,
   setUnauthorizedHandler,
+  setVeto,
   setVote,
   updateListGames,
 } from "./api";
@@ -296,19 +297,50 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
   // Vote / unvote. Show it straight away, then save; if saving fails, reload the list.
   async function handleToggleVote(game: ListGame) {
     if (!list) return;
-    const voted = !game.votes.includes(account.username);
+    const me = account.username;
+    const voted = !game.votes.includes(me);
+    // (voting for the game you vetoed takes the veto back, as the API does)
     setList({
       ...list,
       games: list.games.map((g) =>
         g.id !== game.id
           ? g
-          : { ...g, votes: voted ? [...g.votes, account.username] : g.votes.filter((v) => v !== account.username) },
+          : {
+              ...g,
+              votes: voted ? [...g.votes, me] : g.votes.filter((v) => v !== me),
+              vetoes: voted ? g.vetoes.filter((v) => v !== me) : g.vetoes,
+            },
       ),
     });
     try {
       setList(await setVote(game.id, voted));
     } catch (err) {
       setListError(`Couldn't save your vote: ${err instanceof Error ? err.message : "unknown error"}`);
+      getCurrentList()
+        .then(setList)
+        .catch(() => {});
+    }
+  }
+
+  // Veto a game (or take the veto back). One veto per person: it moves from
+  // wherever it was, and takes back your vote for that game. Shown straight
+  // away, then saved.
+  async function handleToggleVeto(game: ListGame) {
+    if (!list) return;
+    const me = account.username;
+    const vetoed = !game.vetoes.includes(me);
+    setList({
+      ...list,
+      games: list.games.map((g) => {
+        const others = g.vetoes.filter((v) => v !== me);
+        if (g.id !== game.id) return vetoed ? { ...g, vetoes: others } : g;
+        return vetoed ? { ...g, vetoes: [...others, me], votes: g.votes.filter((v) => v !== me) } : { ...g, vetoes: others };
+      }),
+    });
+    try {
+      setList(await setVeto(game.id, vetoed));
+    } catch (err) {
+      setListError(`Couldn't save your veto: ${err instanceof Error ? err.message : "unknown error"}`);
       getCurrentList()
         .then(setList)
         .catch(() => {});
@@ -433,6 +465,7 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
                 onReplace={isAdmin ? handleReplace : undefined}
                 me={account.username}
                 onToggleVote={handleToggleVote}
+                onToggleVeto={handleToggleVeto}
                 members={list.members}
               />
               {justHidden && (

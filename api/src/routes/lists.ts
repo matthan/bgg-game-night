@@ -12,6 +12,8 @@ const MAX_GAMES = 50;
  *   PUT  /api/lists/current/games { gameIds } -> change its games      [admin]
  *   PUT  /api/lists/current/games/:id/vote    -> vote for a game        [anyone signed in]
  *   DELETE /api/lists/current/games/:id/vote  -> take your vote back    [anyone signed in]
+ *   PUT  /api/lists/current/games/:id/veto    -> veto a game (one per person; moves it) [anyone signed in]
+ *   DELETE /api/lists/current/games/:id/veto  -> take your veto back    [anyone signed in]
  */
 export function listsRouter({ db }: { db: DatabaseSync }) {
   const router = Router();
@@ -20,6 +22,7 @@ export function listsRouter({ db }: { db: DatabaseSync }) {
     const list = repo.getCurrentList(db);
     if (!list) return res.json(null);
     const votes = repo.getListVotes(db, list.id);
+    const vetoes = repo.getListVetoes(db, list.id);
     const interest = repo.getInterest(db, list.gameIds);
     res.json({
       id: list.id,
@@ -31,6 +34,7 @@ export function listsRouter({ db }: { db: DatabaseSync }) {
       games: repo.getGamesByIds(db, list.gameIds).map((g) => ({
         ...g,
         votes: votes.get(g.id) ?? [],
+        vetoes: vetoes.get(g.id) ?? [],
         interest: interest.get(g.id) ?? [],
       })),
     });
@@ -78,10 +82,16 @@ export function listsRouter({ db }: { db: DatabaseSync }) {
   router.put("/current/games/:id/vote", (req, res) => vote(req, res, true));
   router.delete("/current/games/:id/vote", (req, res) => vote(req, res, false));
 
-  function vote(req: Request, res: Response, voted: boolean) {
+  // Vetoes: ONE per account per list (vetoing another game moves it); vetoing
+  // a game also takes back your vote for it.
+  router.put("/current/games/:id/veto", (req, res) => vote(req, res, true, "veto"));
+  router.delete("/current/games/:id/veto", (req, res) => vote(req, res, false, "veto"));
+
+  function vote(req: Request, res: Response, on: boolean, kind: "vote" | "veto" = "vote") {
     const gameId = Number(req.params.id);
     if (!Number.isInteger(gameId)) return res.status(400).json({ error: "Invalid game id." });
-    if (!repo.setVote(db, req.account!.id, gameId, voted)) {
+    const set = kind === "veto" ? repo.setVeto : repo.setVote;
+    if (!set(db, req.account!.id, gameId, on)) {
       return res.status(404).json({ error: "That game isn't in the current game list." });
     }
     sendCurrent(res);

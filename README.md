@@ -159,6 +159,17 @@ for sit a little higher than the rest. Each card's 👍 button shows the vote
 count (hover it to see who). Votes belong to the list: creating a new list erases them, and a hidden
 game's votes go with it. Pages re-check the list every 15 seconds.
 
+**Vetoes:** everyone also gets ONE veto per list: the 🚫 button in each card's
+top-left corner (hovering it shows "Veto"). A vetoed game sits lower than the
+rest on desktop and further left on phones, for everyone, however many votes
+it has; its 🚫 turns red for the person who vetoed it and shows how many
+vetoes it has (hover to see who). Once you've vetoed a game, your 🚫 is gone
+from the other cards (a game someone else vetoed still shows theirs, greyed
+out); click your 🚫 again to take it back, or veto a different game by first
+taking it back. Vetoing a game takes back your vote for it, and voting for
+the game you vetoed takes the veto back. Like votes, vetoes belong to the
+list (`list_vetoes` table) and go with a hidden game.
+
 ## Interest levels
 
 Everyone signed in can say how keen they are on each game, shown as a die
@@ -219,6 +230,7 @@ sample games plus a few extras in `api/mock/catalog.xml`.
 | `GET /api/lists/current` | The current shared game list (games in order, with owners) |
 | `POST /api/lists` · `PUT /api/lists/current/games` | Create a list / change its games (admin only) |
 | `PUT`/`DELETE /api/lists/current/games/:id/vote` | Vote / unvote for a game in the current list |
+| `PUT`/`DELETE /api/lists/current/games/:id/veto` | Veto a game / take your veto back (one per person per list; vetoing also removes your vote for it) |
 | `PUT /api/interest/:gameId { level }` · `DELETE /api/interest/:gameId` | Set / clear your interest in a game (level 5 = yes, please! down to 0 = rather not) |
 | `GET /api/interest` | Average interest and number of ratings per game (used to favour well-liked games) |
 | `GET /api/interest/mine` | Your own interest level for every game you've rated (the Rate games page) |
@@ -239,6 +251,7 @@ sample games plus a few extras in `api/mock/catalog.xml`.
 | `collection_items` | Who owns what: rating, plays, added/removed dates, `manual` (added by hand) |
 | `game_lists` | Shared game lists: filters used, game ids in order, who made it (newest = current) |
 | `list_votes` | Votes on the current list (cleared when a new list is made) |
+| `list_vetoes` | Vetoes on the current list: one per person (cleared when a new list is made) |
 | `game_interest` | Each person's interest level per game (kept permanently; no row = no opinion) |
 | `accounts` / `sessions` | Sign-in accounts (hashed passwords) and signed-in browsers |
 | `game_notes` | Your own per-game data: `hidden_at` (Hide button), plus notes/tags (not used by the UI yet) |

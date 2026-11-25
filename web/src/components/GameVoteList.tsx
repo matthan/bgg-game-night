@@ -20,6 +20,7 @@ interface Props {
   onReplace?: (game: OwnedGame) => void; // Replace button: swap for another match, not hidden (admin only)
   me?: string; // signed-in username, to show whether *you* voted
   onToggleVote?: (game: ListGame) => void; // vote button on each card
+  onToggleVeto?: (game: ListGame) => void; // veto button on each card (one veto per person)
   members?: string[]; // everyone who can sign in (not used by the fan any more)
 }
 
@@ -43,6 +44,9 @@ const INTRO_CARD_MS = 750; // each card's own animation
  *   others blur; click it again to close it
  * - vote with the 👍 button only (hover it: "Vote" slides out). Cards you
  *   voted for sit higher (desktop) or further right (phones) than the rest.
+ * - veto with the 🚫 button (top-left; one veto per person per list). A vetoed
+ *   card sits lower (desktop) or further left (phones) for everyone, however
+ *   many votes it has. Once you've vetoed a game, your 🚫 is gone from the others.
  * - ‹ › beside the open card (left / right on desktop, above / below on
  *   phones) step to the previous / next game. They stay level with each other:
  *   on one line across the middle of the fan (desktop) or down the middle of
@@ -55,7 +59,7 @@ const INTRO_CARD_MS = 750; // each card's own animation
  * The selection is stored by POSITION, so when a game is hidden and another
  * fills its spot, the new game is selected in its place.
  */
-export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVote }: Props) {
+export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVote, onToggleVeto }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   // true during the opening animation; cards added later (e.g. after a Hide) just appear
   const [intro, setIntro] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -192,19 +196,30 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
 
   useLayoutEffect(() => {
     let frame = 0;
-    const until = performance.now() + FOLLOW_MS; // the cards are still moving until then
+    let until = performance.now() + FOLLOW_MS; // the cards are still moving until then
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const follow = (snapTitle = false) => {
-      const arrived = placeFollowers(reduced, snapTitle);
-      if (performance.now() < until || !arrived) frame = requestAnimationFrame(() => follow());
+    const follow = (snap = reduced, snapTitle = false) => {
+      cancelAnimationFrame(frame);
+      const arrived = placeFollowers(snap, snapTitle);
+      if (performance.now() < until || !arrived) frame = requestAnimationFrame(() => follow(snap));
     };
-    follow(!wasVisible.current);
+    follow(reduced, !wasVisible.current);
     wasVisible.current = active !== null;
-    const onResize = () => placeFollowers(true);
-    window.addEventListener("resize", onResize);
+    // Re-place them whenever the list's box changes size: window resizes, a
+    // tablet turning, the phone/desktop layout switching, fonts loading… The
+    // cards then animate to their new size, so keep following (snapping, no
+    // glide) until they've settled. (ResizeObserver also reports once when it
+    // starts observing; that one is skipped, so the Hide buttons still glide.)
+    let first = true;
+    const observer = new ResizeObserver(() => {
+      if (first) return void (first = false);
+      until = performance.now() + FOLLOW_MS;
+      follow(true);
+    });
+    if (bodyRef.current) observer.observe(bodyRef.current);
     return () => {
       cancelAnimationFrame(frame);
-      window.removeEventListener("resize", onResize);
+      observer.disconnect();
     };
   }, [placeFollowers, intro, active?.id, active?.votes?.length]);
 
@@ -288,6 +303,8 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
               me={me}
               onSelect={() => handleCardClick(i)}
               onToggleVote={onToggleVote}
+              onToggleVeto={onToggleVeto}
+              myVetoElsewhere={!!me && games.some((o) => o.id !== g.id && o.vetoes?.includes(me))}
               cardRef={(el) => {
                 cardRefs.current[i] = el;
               }}
