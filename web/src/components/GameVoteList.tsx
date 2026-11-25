@@ -24,7 +24,8 @@ interface Props {
 }
 
 const FOLLOW_MS = 700; // the card animation (0.55s in GameVoteList.css) plus a little slack
-const FOLLOW_EASE = 0.16; // share of the remaining distance the Hide/Replace buttons move each frame (~0.4s glide)
+const FOLLOW_EASE = 0.16; // share of the remaining distance the arrows / Hide buttons move each frame (~0.4s glide)
+const ARROW_GAP = 12; // between the ‹ › arrows and the open card (or the ends of the list)
 const VERTICAL_FAN = "(max-width: 1023px)"; // must match the phone section of GameVoteList.css
 
 // Opening animation (once, when the fan first appears): after the page title
@@ -42,9 +43,10 @@ const INTRO_CARD_MS = 750; // each card's own animation
  *   others blur; click it again to close it
  * - vote with the 👍 button only (hover it: "Vote" slides out). Cards you
  *   voted for sit higher (desktop) or further right (phones) than the rest.
- * - ‹ › at the ends of the list (left / right on desktop, above / below on
- *   phones) step to the previous / next game. They stay put whatever is
- *   selected; with nothing open, › opens the first game and ‹ the last.
+ * - ‹ › beside the open card (left / right on desktop, above / below on
+ *   phones) step to the previous / next game. They stay level with each other:
+ *   on one line across the middle of the fan (desktop) or down the middle of
+ *   the list (phones), whatever is open. Hidden with nothing open.
  * - click anywhere outside the open card (or press Escape): back to the fan.
  *   Clicking another card opens that one instead.
  * - the open card's name links to BoardGameGeek (closed cards: no link)
@@ -60,6 +62,10 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
   const rootRef = useRef<HTMLElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const titleRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const prevRef = useRef<HTMLButtonElement>(null);
+  const nextRef = useRef<HTMLButtonElement>(null);
 
   // If the list got shorter, drop a selection that no longer exists.
   const index = selected !== null && selected < games.length ? selected : null;
@@ -94,74 +100,112 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
     };
   }, []);
 
-  // Keep the Hide / Replace buttons (admin) centered under the selected card,
-  // within the list's width. While the cards animate this runs every frame, so
-  // the buttons glide along with the card. (Written straight to the element's
-  // style: no React re-render.) Where the buttons are now (px), so each frame
-  // can ease them a fraction of the way toward where they should be. That gives
-  // one smooth glide, even when the card they follow is itself moving.
-  const pos = useRef<{ title: number | null; vertical: boolean | null }>({
+  // Things that follow the open card, written straight to their style (no
+  // React re-render), every frame while the cards animate so they glide along:
+  // - Hide / Replace (admin): centered under the open card, within the list
+  // - ‹ ›: beside the open card. Only the position ALONG the list follows it;
+  //   across the list they stay on one fixed line (the middle of the fan's row
+  //   on desktop, the middle of the list's column on phones), so the two
+  //   arrows are always level with each other. They track the card exactly
+  //   (no easing), and are only there while a card is open.
+  // `pos` is where each one is now (px), so each frame can ease it a fraction
+  // of the way toward its target: one smooth glide, even while the card it
+  // follows is itself moving.
+  type Key = "title" | "prevX" | "prevY" | "nextX" | "nextY";
+  const pos = useRef<Record<Key, number | null> & { vertical: boolean | null }>({
     title: null,
+    prevX: null,
+    prevY: null,
+    nextX: null,
+    nextY: null,
     vertical: null,
   });
 
-  /** Move the buttons toward their target; `snap` jumps straight there. Returns true once they've arrived. */
-  const placeTitle = useCallback(
-    (snap = false) => {
+  /** Move the followers toward their targets; `snap` jumps straight there
+   * (`snapTitle`: just the Hide buttons). Returns true once all have arrived. */
+  const placeFollowers = useCallback(
+    (snap = false, snapTitle = false) => {
       const root = rootRef.current;
-      const cover = index !== null ? cardRefs.current[index]?.querySelector(".game-vote-list-cover") : null;
-      if (!root || !cover) return true;
-      const c = cover.getBoundingClientRect();
+      const body = bodyRef.current;
+      const cards = cardsRef.current;
+      if (!root || !body || !cards) return true;
       const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, hi));
       const vertical = window.matchMedia(VERTICAL_FAN).matches;
       if (pos.current.vertical !== vertical) snap = true; // switched layouts (e.g. rotated a tablet)
       pos.current.vertical = vertical;
 
       // ease `key` toward `target`: a fixed share of the remaining distance per frame
-      const ease = (key: "title", target: number) => {
+      let done = true;
+      const ease = (key: Key, target: number, jump = snap) => {
         const cur = pos.current[key];
-        let next = snap || cur === null ? target : cur + (target - cur) * FOLLOW_EASE;
+        let next = jump || cur === null ? target : cur + (target - cur) * FOLLOW_EASE;
         if (Math.abs(target - next) < 0.5) next = target;
         pos.current[key] = next;
+        done &&= next === target;
         return next;
       };
-      let done = true;
+
+      const coverOf = (i: number) => cardRefs.current[i]?.querySelector(".game-vote-list-cover")?.getBoundingClientRect();
+      const c = index !== null ? coverOf(index) : undefined;
 
       const title = titleRef.current;
-      if (title) {
+      if (title && c) {
         const r = root.getBoundingClientRect();
         const w = title.offsetWidth;
-        const target = clamp(c.left + c.width / 2 - r.left - w / 2, 0, r.width - w);
-        const x = ease("title", target);
+        const x = ease("title", clamp(c.left + c.width / 2 - r.left - w / 2, 0, r.width - w), snap || snapTitle);
         title.style.transform = `translateX(${x}px)`;
-        done &&= x === target;
       }
 
+      const prev = prevRef.current;
+      const next = nextRef.current;
+      if (prev && next && c) {
+        const b = body.getBoundingClientRect();
+        const list = cards.getBoundingClientRect();
+        const size = prev.offsetWidth;
+        let p: [number, number];
+        let n: [number, number];
+        if (vertical) {
+          // one column down the middle of the list; above / below the open card
+          const x = list.left + list.width / 2 - size / 2 - b.left;
+          p = [x, c.top - b.top - ARROW_GAP - size];
+          n = [x, c.bottom - b.top + ARROW_GAP];
+        } else {
+          // one row across the middle of the fan; left / right of the open card
+          const y = list.top + list.height / 2 - size / 2 - b.top;
+          p = [clamp(c.left - b.left - ARROW_GAP - size, 0, b.width - size), y];
+          n = [clamp(c.right - b.left + ARROW_GAP, 0, b.width - size), y];
+        }
+        // straight to the target every frame: they stay right beside the card as it moves
+        prev.style.translate = `${ease("prevX", p[0], true)}px ${ease("prevY", p[1], true)}px`;
+        next.style.translate = `${ease("nextX", n[0], true)}px ${ease("nextY", n[1], true)}px`;
+      }
       return done;
     },
     [index],
   );
 
-  // When nothing was selected, the followers were invisible: put them straight
-  // in place (they fade in there) instead of gliding from wherever they were.
+  // When nothing was selected, the Hide buttons were invisible: put them
+  // straight in place (they fade in there) instead of gliding from wherever
+  // they were.
   const wasVisible = useRef(false);
 
   useLayoutEffect(() => {
     let frame = 0;
-    const until = performance.now() + FOLLOW_MS; // the card is still moving until then
-    const follow = (snap = false) => {
-      const arrived = placeTitle(snap || window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    const until = performance.now() + FOLLOW_MS; // the cards are still moving until then
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const follow = (snapTitle = false) => {
+      const arrived = placeFollowers(reduced, snapTitle);
       if (performance.now() < until || !arrived) frame = requestAnimationFrame(() => follow());
     };
     follow(!wasVisible.current);
     wasVisible.current = active !== null;
-    const onResize = () => placeTitle(true);
+    const onResize = () => placeFollowers(true);
     window.addEventListener("resize", onResize);
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", onResize);
     };
-  }, [placeTitle, active?.id, active?.votes?.length]);
+  }, [placeFollowers, intro, active?.id, active?.votes?.length]);
 
   // End the opening animation once the last card and the "Vote" box are done.
   const introMs = INTRO_START_MS + Math.max(games.length - 1, 0) * INTRO_STAGGER_MS + INTRO_CARD_MS + 500;
@@ -182,11 +226,10 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
     setSelected(i === index ? null : i);
   }
 
-  // The ‹ › arrows: one step along the list, stopping at the ends. With
-  // nothing open, › opens the first game and ‹ the last.
+  // The ‹ › arrows (only there while a card is open): one step along the
+  // list, stopping at the ends.
   function step(by: 1 | -1) {
-    if (index === null) setSelected(by > 0 ? 0 : games.length - 1);
-    else setSelected(Math.min(Math.max(index + by, 0), games.length - 1));
+    if (index !== null) setSelected(Math.min(Math.max(index + by, 0), games.length - 1));
   }
 
   // Arrow keys move the selection along the fan.
@@ -201,6 +244,7 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
   return (
     <section id="game-vote-list" className="game-vote-list" aria-label="Game list" ref={rootRef}>
       <div
+        ref={bodyRef}
         className="game-vote-list-body"
         style={
           {
@@ -211,8 +255,9 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
           } as CSSProperties
         }
       >
-        {!intro && (
+        {active && !intro && (
           <button
+            ref={prevRef}
             type="button"
             className="card-arrow prev"
             onClick={() => step(-1)}
@@ -224,6 +269,7 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
           </button>
         )}
         <div
+          ref={cardsRef}
           className={`game-vote-list-cards${index !== null ? " has-selection" : ""}${intro ? " intro" : ""}`}
           onKeyDown={handleKeyDown}
         >
@@ -247,9 +293,10 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
             />
           ))}
         </div>
-        {/* (the ‹ › arrows appear once the opening animation is over) */}
-        {!intro && (
+        {/* ‹ › only while a card is open (and the opening animation is over) */}
+        {active && !intro && (
           <button
+            ref={nextRef}
             type="button"
             className="card-arrow next"
             onClick={() => step(1)}

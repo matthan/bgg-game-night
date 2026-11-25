@@ -137,15 +137,15 @@ same setting. The maths is in `interestWeight()` in `web/src/filterGames.ts`.
 **Browsing the list:** click (or tap) a card to open it: it turns to face you
 and the others blur. Click it again, click (or tap) anywhere outside it, or
 press Escape to go back to the fan; clicking another card opens that one
-instead. The ‹ › buttons at either end of the list (or the ← → keys) step to
-the previous / next game. They stay in the same place whatever is open; with
-nothing open, › opens the first game and ‹ the last, and at either end of the
-list the arrow that can't go further is greyed out.
+instead. While a card is open, ‹ › buttons beside it (or the ← → keys) step
+to the previous / next game; the two arrows always stay level with each other
+(the open card's tilt, zoom or "voted" lift doesn't move them), and at either
+end of the list the arrow that can't go further is greyed out.
 On screens narrower than 1024px (phones, tablets) the fan runs down the page:
 each card shows the top of its box art, the selected card opens to full
 height, and cards you voted for slide to the right. Cards are at most 400px
 wide and the list is centered. The arrows sit above (previous) and below
-(next) the list instead of beside it.
+(next) the open card, always on the list's center line.
 
 The open card's name links to BoardGameGeek (clicking it doesn't vote); on a closed card the name isn't a link, so clicking it just opens the card. Who made the list
 and when is kept in the page's `<meta name="game-list">` tag.

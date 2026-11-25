@@ -279,23 +279,20 @@
   .game-vote-list-card:not(.selected) .game-vote-list-caption { opacity: 0; }
   .game-vote-list-name { font-size: 22px; }
 }
-/* ---------- ‹ › at the ends of the list ----------
-   They don't follow the open card, so they never move when a card opens or
-   closes: on desktop they sit left and right of the whole fan, vertically
-   centered on it; on phones above and below the list. On desktop their place
-   comes from the fan's width WITH a card open (its widest), kept on the page
-   on narrower screens. */
-.game-vote-list-body {
-  position: relative;
-  --fan-w: calc(var(--intro-count) * var(--slot) + (var(--intro-count) - 1) * 10px + var(--slot-open) - var(--slot));
-  --arrow-gap: 40px; /* from the fan's edge to the arrow */
-}
+/* ---------- ‹ › beside the open card ----------
+   GameVoteList.tsx places them (style.translate, from the top-left of
+   .game-vote-list-body) and glides them along with the open card: left / right
+   of it on desktop, above / below it on phones, always on one line across the
+   fan (desktop) or down the middle of the list (phones). Only shown while a
+   card is open. */
+.game-vote-list-body { position: relative; }
 .card-arrow {
   position: absolute;
-  top: calc((var(--cover-h) * 1.3 + 40px) / 2); /* middle of the fan's row (.game-vote-list-cards' height) */
-  /* above the closed cards but under the open one (z-index 5): the fan nearly
-     fills the page, so an open FIRST / LAST card reaches over its (disabled)
-     arrow, which is then tucked away behind it */
+  top: 0;
+  left: 0;
+  /* above the closed cards but under the open one (z-index 5): when the FIRST
+     or LAST card is open there's no room past it, so its (disabled) arrow is
+     tucked behind it */
   z-index: 4;
   display: grid;
   place-items: center;
@@ -307,22 +304,19 @@
   background: rgba(10, 5, 15, 0.72);
   color: var(--text);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-  translate: 0 -50%;
-  animation: card-arrow-in 0.35s ease both; /* fade in after the opening animation */
+  will-change: translate;
+  animation: card-arrow-in 0.3s ease 0.15s both; /* fade in as the card opens */
   transition: background 0.2s, transform 0.15s, opacity 0.2s;
 }
 .card-arrow:hover:not(:disabled) { background: var(--accent); color: var(--accent-text); transform: scale(1.1); }
 /* at either end of the list: still there (so nothing shifts), just greyed out */
 .card-arrow:disabled { opacity: 0.3; cursor: default; }
-.card-arrow.prev { left: max(0px, calc(50% - var(--fan-w) / 2 - var(--arrow-gap) - 36px)); }
-.card-arrow.next { right: max(0px, calc(50% - var(--fan-w) / 2 - var(--arrow-gap) - 36px)); }
 @keyframes card-arrow-in { from { opacity: 0; } }
-/* phones (vertical fan): above and below the list, centered, turned to point
-   up (previous) and down (next) */
+/* phones (vertical fan): turned to point up (previous) and down (next), with
+   room kept above the list and between it and the Hide row for them */
 @media (max-width: 1023px) {
-  .card-arrow { position: static; margin: 0 auto; translate: none; }
-  .card-arrow.prev { margin-bottom: 10px; }
-  .card-arrow.next { margin-top: 4px; }
+  .game-vote-list-body { padding-top: 48px; }
+  .game-vote-list-cards { margin-bottom: 48px; } /* room for › under the last card */
   .card-arrow svg { rotate: 90deg; }
 }
 
