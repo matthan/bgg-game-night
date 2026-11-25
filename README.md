@@ -29,20 +29,69 @@ in mock mode, so sample games never mix with yours). Delete it to start fresh.
 
 ## Deploy to ZimaOS
 
-1. Copy the project folder to the server (or `git clone` it there).
-2. Create `.env` with your `BGG_TOKEN` (and `TZ`, see `.env.example`).
-3. Run:
+The server runs ready-made images; it doesn't build anything.
+
+1. **Push to `main`** (or merge a pull request). GitHub Actions
+   (`.github/workflows/publish.yml`) type-checks, runs the API tests, builds
+   the web app, and publishes two images to GitHub's container registry:
+   `ghcr.io/matthan/bgg-game-night-api` and `…-web` (tags `latest` and
+   `sha-<commit>`). Branches and pull requests are only checked, never deployed.
+2. **Watchtower** (in `docker-compose.prod.yml`) checks for new `latest` images
+   every 5 minutes, pulls them, restarts `api` / `web`, and removes the old
+   images. It only touches containers with the
+   `com.centurylinklabs.watchtower.enable` label, so other ZimaOS apps are left
+   alone. Database migrations run when the API starts, so a new schema is
+   applied on the first start of the new image.
+
+See what it's doing with `docker compose -f docker-compose.prod.yml logs -f watchtower`.
+
+### First-time setup on the server
+
+1. Put `docker-compose.prod.yml` and a `.env` (your `BGG_TOKEN`, `TZ`, see
+   `.env.example`) in a folder on the server. Use the **same folder** the app
+   was deployed from before, so Compose replaces the old containers instead of
+   starting a second copy (or run `docker compose -f docker-compose.prod.yml
+   down` in the old folder first). The rest of the code isn't needed there.
+   If that `.env` was copied from an older `.env.example`, delete its
+   `SECURE_COOKIES=false` line (see below).
+2. If the images are **private**, give the server read access (skip this if
+   you made the two packages public under GitHub → your profile → Packages →
+   Package settings → Change visibility):
 
    ```bash
-   docker compose -f docker-compose.prod.yml up -d --build
+   # a GitHub token (classic) with only the read:packages scope
+   mkdir -p /DATA/AppData/bgg-game-night/registry-login
+   docker --config /DATA/AppData/bgg-game-night/registry-login login ghcr.io -u matthan
    ```
 
-4. Open `http://<server-ip>:8080`.
+   Watchtower reads this login from that folder. For the first start below,
+   put `DOCKER_CONFIG=/DATA/AppData/bgg-game-night/registry-login` in front of
+   the command so it can pull too.
+
+3. Start it:
+
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d --remove-orphans
+   ```
+
+4. Open `http://<server-ip>:8080`, or the domain set up in Nginx Proxy Manager.
+   The `web` container joins the external `proxy` network as `bgpicker`.
 
 The database is stored in `/DATA/AppData/bgg-game-night/data` on the server.
 Set `DATA_DIR` or `WEB_PORT` in `.env` to change those. Back up by copying
-that folder. To update, pull the new code and run the same command again;
-the data is kept.
+that folder.
+
+**Sign-in cookies:** in production `SECURE_COOKIES` defaults to `true` (the
+login cookie is only sent over HTTPS), because the site is reached through the
+Cloudflare tunnel. Signing in over plain `http://<server-ip>:8080` then won't
+work; set `SECURE_COOKIES=false` in the server's `.env` if you need that.
+
+**Changes to `docker-compose.prod.yml` itself** (new settings, ports) are not
+picked up by Watchtower: copy the file to the server and run step 3 again.
+
+**Rolling back:** point `image:` at an older tag (e.g. `:sha-abc1234`, listed
+on the package's page) and run step 3; Watchtower leaves a pinned tag alone
+until you switch back to `:latest`.
 
 ## Signing in
 
@@ -229,7 +278,8 @@ web/
   src/components/           LoginPage, AccountsPanel, AddGamesPanel, CollectionsBar, Filters, GameCarousel, UsernameForm
   nginx.conf                production web server (ZimaOS)
 docker-compose.yml          local development
-docker-compose.prod.yml     ZimaOS / production
+docker-compose.prod.yml     ZimaOS / production (published images + Watchtower)
+.github/workflows/publish.yml  checks every push; publishes images from main
 ```
 
 ## Ideas for next steps
