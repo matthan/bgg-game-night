@@ -315,10 +315,9 @@
 .card-arrow:disabled { opacity: 0.3; cursor: default; }
 @keyframes card-arrow-in { from { opacity: 0; } }
 /* phones (vertical fan): wider pills (easier to tap), turned to point up
-   (previous) and down (next), with room kept above and below the list */
+   (previous) and down (next), with room kept below the list for › */
 @media (max-width: 1023px) {
   .card-arrow { width: 120px; }
-  .game-vote-list-body { padding-top: 48px; }
   .game-vote-list-cards { margin-bottom: 48px; } /* room for › under the last card */
   .card-arrow svg { rotate: 90deg; }
 }
