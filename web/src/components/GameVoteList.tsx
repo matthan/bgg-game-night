@@ -7,8 +7,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import type { InterestLevel, ListGame, OwnedGame } from "../types";
-import { InterestPanel } from "./InterestPanel";
+import type { ListGame, OwnedGame } from "../types";
 import { GameCard, type BoardGame } from "./GameCard";
 import "./GameVoteList.css";
 
@@ -20,11 +19,10 @@ interface Props {
   me?: string; // signed-in username, to show whether *you* voted
   onToggleVote?: (game: ListGame) => void; // vote button on each card
   members?: string[]; // everyone who can sign in (not used by the fan any more)
-  onSetInterest?: (game: ListGame, level: InterestLevel | null) => void;
 }
 
 const FOLLOW_MS = 700; // the card animation (0.55s in GameVoteList.css) plus a little slack
-const FOLLOW_EASE = 0.16; // share of the remaining distance the slider/Hide move each frame (~0.4s glide)
+const FOLLOW_EASE = 0.16; // share of the remaining distance the Hide/Replace buttons move each frame (~0.4s glide)
 const VERTICAL_FAN = "(max-width: 1023px)"; // must match the phone section of GameVoteList.css
 
 // Opening animation (once, when the fan first appears): after the page title
@@ -42,33 +40,45 @@ const INTRO_CARD_MS = 750; // each card's own animation
  *   others blur; click it again to close it
  * - vote with the 👍 button only (hover it: "Vote" slides out). Cards you
  *   voted for sit higher (desktop) or further right (phones) than the rest.
- * - click anywhere else (or press Escape): back to the fan
+ * - ‹ › beside the open card (desktop), or ▲ ▼ on it (phones), step to the
+ *   previous / next game
+ * - click anywhere outside the open card (or press Escape): back to the fan.
+ *   Clicking another card opens that one instead.
  * - the game's name on the card links to BoardGameGeek
+ * - interest is rated on the Rate games page; the cards just show everyone's dice
  *
  * The selection is stored by POSITION, so when a game is hidden and another
  * fills its spot, the new game is selected in its place.
  */
-export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVote, onSetInterest }: Props) {
+export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVote }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   // true during the opening animation; cards added later (e.g. after a Hide) just appear
   const [intro, setIntro] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const rootRef = useRef<HTMLElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const titleRef = useRef<HTMLDivElement>(null);
-  const cardsRef = useRef<HTMLDivElement>(null);
-  const rateRef = useRef<HTMLDivElement>(null); // the interest slider's moving box
 
   // If the list got shorter, drop a selection that no longer exists.
   const index = selected !== null && selected < games.length ? selected : null;
   const active = index !== null ? games[index] : null;
   const shown = active ?? games[0]; // what the info area under the fan renders (invisibly when nothing's selected)
 
-  // Click outside the fan (and its info line) or press Escape to deselect.
+  // Click anywhere outside the cards (including the gaps around them) or press
+  // Escape to deselect. Clicks on a card are left to the card: the open card's
+  // ‹ › arrows and 👍 button, or another card (which opens instead). The
+  // Hide / Replace buttons under the open card keep it open too.
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       // composedPath: where the click happened, even if that element has since
       // been removed (e.g. the ‹ › button, which moves to the next card)
-      if (rootRef.current && !e.composedPath().includes(rootRef.current)) setSelected(null);
+      const onCardOrButtons = e
+        .composedPath()
+        .some(
+          (el) =>
+            el instanceof Element &&
+            (el.classList.contains("game-vote-list-card") || el.classList.contains("game-vote-list-info")),
+        );
+      if (!onCardOrButtons) setSelected(null);
     };
     const onKey = (e: globalThis.KeyboardEvent) => e.key === "Escape" && setSelected(null);
     document.addEventListener("click", onClick);
@@ -79,39 +89,31 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
     };
   }, []);
 
-  // Keep the Hide button and the interest slider lined up with the selected
-  // card, but inside the card list:
-  // - Hide (admin): centered under the card
-  // - slider, desktop: centered under the card, within the row's width
-  // - slider, phones (vertical fan): beside the card, rotated, centered on it
-  //   vertically, within the column's height
-  // While the cards animate this runs every frame, so they glide along with
-  // the card. (Written straight to the elements' style: no React re-render.)
-  // Where the Hide button and the slider are now (px), so each frame can ease
-  // them a fraction of the way toward where they should be. That gives one
-  // smooth glide, even when the card they follow is itself moving.
-  const pos = useRef<{ title: number | null; rate: number | null; vertical: boolean | null }>({
+  // Keep the Hide / Replace buttons (admin) centered under the selected card,
+  // within the list's width. While the cards animate this runs every frame, so
+  // the buttons glide along with the card. (Written straight to the element's
+  // style: no React re-render.) Where the buttons are now (px), so each frame
+  // can ease them a fraction of the way toward where they should be. That gives
+  // one smooth glide, even when the card they follow is itself moving.
+  const pos = useRef<{ title: number | null; vertical: boolean | null }>({
     title: null,
-    rate: null,
     vertical: null,
   });
 
-  /** Move the followers toward their targets; `snap` jumps straight there. Returns true once both have arrived. */
+  /** Move the buttons toward their target; `snap` jumps straight there. Returns true once they've arrived. */
   const placeTitle = useCallback(
     (snap = false) => {
       const root = rootRef.current;
-      const cards = cardsRef.current;
       const cover = index !== null ? cardRefs.current[index]?.querySelector(".game-vote-list-cover") : null;
-      if (!root || !cards || !cover) return true;
+      if (!root || !cover) return true;
       const c = cover.getBoundingClientRect();
-      const list = cards.getBoundingClientRect();
       const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, hi));
       const vertical = window.matchMedia(VERTICAL_FAN).matches;
       if (pos.current.vertical !== vertical) snap = true; // switched layouts (e.g. rotated a tablet)
       pos.current.vertical = vertical;
 
       // ease `key` toward `target`: a fixed share of the remaining distance per frame
-      const ease = (key: "title" | "rate", target: number) => {
+      const ease = (key: "title", target: number) => {
         const cur = pos.current[key];
         let next = snap || cur === null ? target : cur + (target - cur) * FOLLOW_EASE;
         if (Math.abs(target - next) < 0.5) next = target;
@@ -130,24 +132,6 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
         done &&= x === target;
       }
 
-      const rate = rateRef.current;
-      const box = rate?.parentElement; // .game-vote-list-rate: the slider's lane
-      if (rate && box) {
-        const b = box.getBoundingClientRect();
-        if (vertical) {
-          const h = rate.offsetHeight;
-          const target = clamp(c.top + c.height / 2 - b.top - h / 2, list.top - b.top, list.bottom - b.top - h);
-          const y = ease("rate", target);
-          rate.style.transform = `translateY(${y}px)`;
-          done &&= y === target;
-        } else {
-          const w = rate.offsetWidth;
-          const target = clamp(c.left + c.width / 2 - b.left - w / 2, list.left - b.left, list.right - b.left - w);
-          const x = ease("rate", target);
-          rate.style.transform = `translateX(${x}px)`;
-          done &&= x === target;
-        }
-      }
       return done;
     },
     [index],
@@ -206,7 +190,6 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
     <section id="game-vote-list" className="game-vote-list" aria-label="Game list" ref={rootRef}>
       <div className="game-vote-list-body">
         <div
-          ref={cardsRef}
           className={`game-vote-list-cards${index !== null ? " has-selection" : ""}${intro ? " intro" : ""}`}
           onKeyDown={handleKeyDown}
           style={
@@ -278,26 +261,6 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
           </div>
         )}
 
-        {/* The interest slider: under the game list on desktop, beside it (rotated) on
-          phones; lined up with the selected card (see placeTitle). With nothing
-          selected the slider is invisible (still taking its space) and a
-          placeholder in its place says what to do. */}
-        {shown && onSetInterest && me && shown.interest && (
-          <div className={`game-vote-list-rate${active ? "" : " is-placeholder"}`}>
-            <div className="game-vote-list-rate-hint" aria-hidden={active ? true : undefined}>
-              <span className="hint-hover">Select a game to rate your interest</span>
-              <span className="hint-touch">Tap a game to rate your interest</span>
-            </div>
-            <div className="game-vote-list-rate-follow" ref={rateRef} aria-hidden={active ? undefined : true}>
-              <InterestPanel
-                key={shown.id} // a fresh slider for each game
-                game={shown as ListGame}
-                me={me}
-                onSetInterest={onSetInterest}
-              />
-            </div>
-          </div>
-        )}
       </div>
     </section>
   );

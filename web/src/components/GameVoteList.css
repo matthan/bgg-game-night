@@ -198,52 +198,9 @@
 .game-vote-list-card.selected .vote-button { right: calc(var(--slot-open) - var(--cover-w) + 10px); }
 
 
-.game-vote-list-info { margin-top: 4px; min-height: 1.6em; }
-/* nothing selected: these keep their size; the slider is swapped for a
-   placeholder (below), the Hide button shows nothing */
-.game-vote-list-info,
-.game-vote-list-rate-follow,
-.game-vote-list-rate-hint { transition: opacity 0.35s ease, visibility 0.35s; }
-.game-vote-list-info.is-placeholder,
-.game-vote-list-rate.is-placeholder .game-vote-list-rate-follow,
-.game-vote-list-rate:not(.is-placeholder) .game-vote-list-rate-hint { opacity: 0; visibility: hidden; }
-
-/* the interest slider's lane under the fan; .game-vote-list-rate-follow slides along it
-   to sit under the selected card (GameVoteList sets the transform) */
-.game-vote-list-rate { position: relative; margin-top: 14px; }
-.game-vote-list-rate-follow { width: max-content; max-width: 100%; will-change: transform; } /* moved (and eased) by GameVoteList.tsx */
-
-/* the slider's placeholder: a dashed box where the slider will appear, saying
-   what to do (hover with a mouse, tap on touch screens) */
-.game-vote-list-rate-hint {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-}
-.game-vote-list-rate-hint > span {
-  box-sizing: border-box;
-  display: grid;
-  place-items: center;
-  height: 100%;
-  min-width: min(480px, 100%);
-  padding: 0 28px;
-  border: 2px dashed rgba(255, 255, 255, 0.18);
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.15);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.hint-touch { display: none !important; }
-@media (hover: none) {
-  .hint-hover { display: none !important; }
-  .hint-touch { display: grid !important; }
-}
+.game-vote-list-info { margin-top: 4px; min-height: 1.6em; transition: opacity 0.35s ease, visibility 0.35s; }
+/* nothing selected: the Hide / Replace row keeps its size but shows nothing */
+.game-vote-list-info.is-placeholder { opacity: 0; visibility: hidden; }
 /* Hide button (admin): centered under the selected card (GameVoteList sets the translateX) */
 .game-vote-list-title {
   width: max-content;
@@ -269,50 +226,20 @@
     --row: 76px;        /* visible strip of each card */
     --cover-h: 210px;   /* a card's full height (shorter than on desktop) */
     --shift: 40px;      /* how far a voted card slides right */
-    --rail: 64px;       /* width of the interest slider's column, right of the cards */
-    --rate-len: 600px;  /* length of the (rotated) slider */
+    --card-max: 400px;  /* widest a card gets */
     margin-top: 12px;
   }
-  /* cards on the left, the slider's column on the right, Hide under the cards */
-  .game-vote-list-body {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--rail);
-    column-gap: 8px;
-    align-items: start;
-    max-width: 660px;
-    margin: 0 auto;
-  }
-  .game-vote-list-info { grid-column: 1; grid-row: 2; }
-  .game-vote-list-rate { grid-column: 2; grid-row: 1; align-self: stretch; margin: 0; }
-  /* placeholder: a tall dashed strip down the middle of the column, text turned
-     like the slider */
-  .game-vote-list-rate-hint { inset: 0; }
-  .game-vote-list-rate-hint > span {
-    width: var(--rail);
-    min-width: 0;
-    height: min(var(--rate-len), 100%);
-    padding: 24px 0;
-    writing-mode: vertical-rl;
-  }
-  /* the slider, turned 90° (no opinion at the top), sliding up and down */
-  .game-vote-list-rate-follow {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: var(--rail);
-    height: var(--rate-len);
-    max-width: none;
-  }
+  /* The list is centered: a column as wide as a card plus the lane voted cards
+     slide into, never wider than the page (whose padding keeps it 30px from
+     the screen's edges). */
   .game-vote-list-cards {
-    grid-column: 1;
-    grid-row: 1;
     flex-direction: column;
     align-items: flex-start;
     justify-content: flex-start;
     gap: 6px;
-    width: 100%;
+    width: min(100%, var(--card-max) + var(--shift));
     height: auto;
-    margin: 0;
+    margin: 0 auto;
     /* the last card's cover hangs below its strip */
     padding: 0 0 calc(var(--cover-h) - var(--row));
     transition: padding var(--fan-speed) var(--fan-ease);
@@ -351,7 +278,7 @@
   .game-vote-list-card:not(.selected) .game-vote-list-caption { opacity: 0; }
   .game-vote-list-name { font-size: 22px; }
 }
-/* ---------- ‹ › beside the open card (desktop) ----------
+/* ---------- ‹ › beside the open card ----------
    Inside the open card, so they turn and zoom with it: just left of the
    cover, and just right of it (the cover is wider than the card's slot). */
 .card-arrow {
@@ -376,8 +303,16 @@
 .card-arrow.prev { left: -48px; }
 .card-arrow.next { left: calc(var(--cover-w) + 12px); }
 @keyframes card-arrow-in { from { opacity: 0; } to { opacity: 1; } }
-/* the vertical (phone) layout lists every game down the page: no arrows there */
-@media (max-width: 1023px) { .card-arrow { display: none; } }
+/* phones (vertical fan): there's no room beside the card, so the arrows sit on
+   the open card's right edge, one above the other, turned to point up (previous)
+   and down (next) like the list. */
+@media (max-width: 1023px) {
+  .card-arrow.prev,
+  .card-arrow.next { left: auto; right: 10px; }
+  .card-arrow.prev { translate: 0 calc(-100% - 4px); }
+  .card-arrow.next { translate: 0 4px; }
+  .card-arrow svg { rotate: 90deg; }
+}
 
 /* ---------- opening animation (GameVoteList.tsx sets the timing variables) ---------- */
 /* each card fades in, sliding in from the right while swinging round on its
@@ -430,6 +365,6 @@
 @keyframes fan-vote-out { from { opacity: 1; } to { opacity: 0; transform: scale(1.04); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .game-vote-list-card, .game-vote-list-cover, .vote-button, .game-vote-list-info, .game-vote-list-rate-follow, .game-vote-list-rate-hint { transition: none; }
+  .game-vote-list-card, .game-vote-list-cover, .vote-button, .game-vote-list-info { transition: none; }
   .game-vote-list-cards.intro .game-vote-list-card, .game-vote-list-intro-vote { animation: none; }
 }

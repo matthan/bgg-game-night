@@ -135,17 +135,17 @@ not" about 0.18×; Strong doubles that. Replacements (Hide / Replace) use the
 same setting. The maths is in `interestWeight()` in `web/src/filterGames.ts`.
 
 **Browsing the list:** click (or tap) a card to open it: it turns to face you
-and the others blur. Click it again, click elsewhere or press Escape to go
-back to the fan. On desktop, the ‹ › buttons beside the open card (or the ← →
-keys) step to the previous / next game; there's no ‹ on the first game and no
-› on the last.
+and the others blur. Click it again, click (or tap) anywhere outside it, or
+press Escape to go back to the fan; clicking another card opens that one
+instead. The ‹ › buttons beside the open card (or the ← → keys) step to the
+previous / next game; there's no ‹ on the first game and no › on the last.
 On screens narrower than 1024px (phones, tablets) the fan runs down the page:
 each card shows the top of its box art, the selected card opens to full
-height, and cards you voted for slide to the right. The interest slider sits in
-a column to the right of the cards, turned on its side.
+height, and cards you voted for slide to the right. Cards are at most 400px
+wide and the list is centered. The arrows sit on the open card's right edge,
+pointing up (previous) and down (next).
 
-The interest slider always lines up with the selected card (centered under it
-on desktop, beside it on phones) without going past the ends of the list. The game's name on the card links to BoardGameGeek (clicking it doesn't vote). Who made the list
+The game's name on the card links to BoardGameGeek (clicking it doesn't vote). Who made the list
 and when is kept in the page's `<meta name="game-list">` tag.
 
 **Voting:** everyone signed in can vote for any games in the current list
@@ -159,9 +159,9 @@ game's votes go with it. Pages re-check the list every 15 seconds.
 
 Everyone signed in can say how keen they are on each game, shown as a die
 from six pips down to one: Yes, please! · Sounds great · Sure thing ·
-Slightly · Not particularly · Rather not — or no opinion. Select a card, then
-drag the **Rate your interest** slider (far left = no opinion); it saves a
-moment after you stop. Each card shows everyone's dice. The labels, dice and colors live in `web/src/interest.ts`.
+Slightly · Not particularly · Rather not — or no opinion. Ratings are set on
+the **Rate games** page (below); each card in the game list shows everyone's
+dice. The labels, dice and colors live in `web/src/interest.ts`.
 Unlike votes, interest is kept permanently per person per game
 (`game_interest` table), so it carries over to future lists.
 
@@ -173,8 +173,7 @@ a row of dice: tap one to set your interest, tap it again to clear it. Filters:
 name search, **Unrated only** (games you rate stay visible until you change a
 filter) and one collection. Cards load in batches as you scroll. The page lives
 at `#rate`, so the browser's back button works. Your ratings come from
-`GET /api/interest/mine` and are saved with the same `PUT /api/interest/:gameId`
-as the slider.
+`GET /api/interest/mine` and are saved with `PUT /api/interest/:gameId`.
 
 ## Adding games by hand
 

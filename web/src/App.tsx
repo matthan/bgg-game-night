@@ -8,7 +8,6 @@ import {
   listUsers,
   logout,
   setGameHidden,
-  setInterest,
   setUnauthorizedHandler,
   setVote,
   updateListGames,
@@ -23,7 +22,7 @@ import { GameCarousel } from "./components/GameCarousel";
 import { GameVoteList } from "./components/GameVoteList";
 import { useCollections, userKey } from "./hooks/useCollections";
 import { filterGames, mergeCollections, pickGames } from "./filterGames";
-import type { Account, CollectionResponse, FilterState, GameList, InterestLevel, ListGame, OwnedGame } from "./types";
+import type { Account, CollectionResponse, FilterState, GameList, ListGame, OwnedGame } from "./types";
 
 const DEFAULT_FILTERS: FilterState = {
   players: null,
@@ -316,33 +315,6 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
     }
   }
 
-  // Set your interest in a game (null = no opinion). Show it straight away, then save.
-  async function handleSetInterest(game: ListGame, level: InterestLevel | null) {
-    if (!list) return;
-    const me = account.username;
-    const withMine = (g: ListGame): ListGame => ({
-      ...g,
-      interest: [
-        ...g.interest.filter((i) => i.username !== me),
-        ...(level === null ? [] : [{ username: me, level }]),
-      ].sort((a, b) => b.level - a.level || a.username.localeCompare(b.username)),
-    });
-    setList({ ...list, games: list.games.map((g) => (g.id === game.id ? withMine(g) : g)) });
-    try {
-      const interest = await setInterest(game.id, level);
-      setList((current) =>
-        current
-          ? { ...current, games: current.games.map((g) => (g.id === game.id ? { ...g, interest } : g)) }
-          : current,
-      );
-    } catch (err) {
-      setListError(`Couldn't save your interest: ${err instanceof Error ? err.message : "unknown error"}`);
-      getCurrentList()
-        .then(setList)
-        .catch(() => {});
-    }
-  }
-
   // Undo a hide or replace: (show the game again and) put it back where it was.
   async function handleUndoHide() {
     if (!list || !justHidden) return;
@@ -462,7 +434,6 @@ function GamePicker({ account, onSignOut }: { account: Account; onSignOut: () =>
                 me={account.username}
                 onToggleVote={handleToggleVote}
                 members={list.members}
-                onSetInterest={handleSetInterest}
               />
               {justHidden && (
                 <p id="hide-message" className="status" role="status">
