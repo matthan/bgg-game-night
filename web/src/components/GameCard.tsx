@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpRightFromSquare, faChevronLeft, faChevronRight, faThumbsUp } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUpRightFromSquare, faThumbsUp } from "@fortawesome/free-solid-svg-icons";
 import type { ListGame, OwnedGame } from "../types";
 import { interestInfo, showInInterest } from "../interest";
 import { formatCounts } from "../filterGames";
@@ -17,9 +17,6 @@ interface Props {
   onSelect: () => void; // click / Enter / Space on the cover
   onToggleVote?: (game: ListGame) => void; // the 👍 button
   cardRef?: (el: HTMLDivElement | null) => void; // GameVoteList measures the cards (see placeTitle)
-  // open card only: the ‹ › buttons beside it (left out at the ends of the list)
-  onPrev?: () => void;
-  onNext?: () => void;
 }
 
 const bggUrl = (id: number) => `https://boardgamegeek.com/boardgame/${id}`;
@@ -43,7 +40,7 @@ export function formatPlayersAndBest(g: OwnedGame) {
  * keep them as they are. The Hide button and the interest slider are NOT part
  * of the card: GameVoteList renders them once and lines them up with the open card.
  */
-export function GameCard({ game: g, index, selected, me, onSelect, onToggleVote, cardRef, onPrev, onNext }: Props) {
+export function GameCard({ game: g, index, selected, me, onSelect, onToggleVote, cardRef }: Props) {
   const votes = g.votes ?? [];
   const iVoted = !!me && votes.includes(me);
   const interest = (g.interest ?? []).filter((it) => showInInterest(it.username));
@@ -79,18 +76,20 @@ export function GameCard({ game: g, index, selected, me, onSelect, onToggleVote,
           )}
           {/* name (links to BGG), then players (best with) · everyone's interest */}
           <span className="game-vote-list-caption">
+            {/* Only the open card's name is a link: on a closed card there's no
+                href, so clicking the name just opens the card like the rest of it. */}
             <a
               className="game-vote-list-name"
-              href={bggUrl(g.id)}
+              href={selected ? bggUrl(g.id) : undefined}
               target="_blank"
               rel="noreferrer"
               tabIndex={selected ? 0 : -1} // reachable by keyboard on the selected card
-              onClick={(e) => e.stopPropagation()} // opening the link doesn't open/close the card
+              onClick={selected ? (e) => e.stopPropagation() : undefined} // following the link doesn't close the card
               onKeyDown={(e) => e.stopPropagation()}
             >
               {g.name}
               <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="external-icon" aria-hidden />
-              <span className="visually-hidden"> (opens BoardGameGeek in a new tab)</span>
+              {selected && <span className="visually-hidden"> (opens BoardGameGeek in a new tab)</span>}
             </a>
             <span className="game-vote-list-meta">
               <span className="game-vote-list-stats">👥 {formatPlayersAndBest(g)}</span>
@@ -111,23 +110,6 @@ export function GameCard({ game: g, index, selected, me, onSelect, onToggleVote,
           </span>
         </span>
       </div>
-      {/* ‹ › beside the open card: same as the ← → keys (none past either end) */}
-      {selected && onPrev && (
-        <button
-          type="button"
-          className="card-arrow prev"
-          onClick={onPrev}
-          aria-label="Previous game"
-          title="Previous game"
-        >
-          <FontAwesomeIcon icon={faChevronLeft} aria-hidden />
-        </button>
-      )}
-      {selected && onNext && (
-        <button type="button" className="card-arrow next" onClick={onNext} aria-label="Next game" title="Next game">
-          <FontAwesomeIcon icon={faChevronRight} aria-hidden />
-        </button>
-      )}
       {onToggleVote && g.votes && (
         <button
           type="button"

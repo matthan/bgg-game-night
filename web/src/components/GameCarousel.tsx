@@ -15,7 +15,6 @@ interface Props {
   me?: string; // voting isn't shown in the slideshow (see GameVoteList)
   onToggleVote?: (game: never) => void;
   members?: string[]; // interest isn't shown in the slideshow either
-  onSetInterest?: (game: never, level: never) => void;
 }
 
 /**
