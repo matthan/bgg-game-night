@@ -144,7 +144,9 @@ end of the list the arrow that can't go further is greyed out.
 On screens narrower than 1024px (phones, tablets) the fan runs down the page:
 each card shows the top of its box art, the selected card opens to full
 height, and cards you voted for slide to the right. Cards are at most 400px
-wide and the list is centered. The arrows sit above (previous) and below
+wide and centered on the page, with room for a slide on either side (voted
+cards use the right; the left is kept for a future left shift). The arrows
+are wider there (120px) for easier tapping. The arrows sit above (previous) and below
 (next) the open card, always on the list's center line.
 
 The open card's name links to BoardGameGeek (clicking it doesn't vote); on a closed card the name isn't a link, so clicking it just opens the card. Who made the list

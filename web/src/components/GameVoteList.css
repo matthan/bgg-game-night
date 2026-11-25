@@ -226,19 +226,21 @@
   .game-vote-list {
     --row: 76px;        /* visible strip of each card */
     --cover-h: 210px;   /* a card's full height (shorter than on desktop) */
-    --shift: 40px;      /* how far a voted card slides right */
+    --shift: 40px;      /* how far a card slides sideways (voted: right) */
     --card-max: 400px;  /* widest a card gets */
     margin-top: 12px;
   }
-  /* The list is centered: a column as wide as a card plus the lane voted cards
-     slide into, never wider than the page (whose padding keeps it 30px from
-     the screen's edges). */
+  /* The list is centered: a column as wide as a card plus a --shift lane on
+     EACH side, never wider than the page (whose padding keeps it 30px from the
+     screen's edges). Cards sit in the middle, so an unshifted card is centered
+     on the page; a voted card slides into the right lane, and a card shifted
+     left (translate: calc(-1 * var(--shift)) 0) would use the left one. */
   .game-vote-list-cards {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     justify-content: flex-start;
     gap: 6px;
-    width: min(100%, var(--card-max) + var(--shift));
+    width: min(100%, var(--card-max) + 2 * var(--shift));
     height: auto;
     margin: 0 auto;
     /* the last card's cover hangs below its strip */
@@ -246,7 +248,7 @@
     transition: padding var(--fan-speed) var(--fan-ease);
   }
 
-  .game-vote-list-card { width: calc(100% - var(--shift)); height: var(--row); }
+  .game-vote-list-card { width: calc(100% - 2 * var(--shift)); height: var(--row); }
   /* when a card opens, the others' strips get a little shorter to make room,
      so the list keeps the same height (and the last card keeps its overhang) */
   .game-vote-list-cards.has-selection .game-vote-list-card:not(.selected) {
@@ -264,7 +266,7 @@
   }
   .game-vote-list-cover img { object-position: top; } /* keep the top of the box art in view */
 
-  .game-vote-list-card.selected { width: calc(100% - var(--shift)); height: var(--cover-h); scale: 1; }
+  .game-vote-list-card.selected { width: calc(100% - 2 * var(--shift)); height: var(--cover-h); scale: 1; }
   .game-vote-list-card.selected .game-vote-list-cover { transform: rotateX(0); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); }
   /* hover (mouse only): the subtle turn is on the horizontal axis here */
   @media (hover: hover) {
@@ -312,9 +314,10 @@
 /* at either end of the list: still there (so nothing shifts), just greyed out */
 .card-arrow:disabled { opacity: 0.3; cursor: default; }
 @keyframes card-arrow-in { from { opacity: 0; } }
-/* phones (vertical fan): turned to point up (previous) and down (next), with
-   room kept above the list and between it and the Hide row for them */
+/* phones (vertical fan): wider pills (easier to tap), turned to point up
+   (previous) and down (next), with room kept above and below the list */
 @media (max-width: 1023px) {
+  .card-arrow { width: 120px; }
   .game-vote-list-body { padding-top: 48px; }
   .game-vote-list-cards { margin-bottom: 48px; } /* room for › under the last card */
   .card-arrow svg { rotate: 90deg; }

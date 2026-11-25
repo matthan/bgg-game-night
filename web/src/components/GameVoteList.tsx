@@ -161,19 +161,20 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
       if (prev && next && c) {
         const b = body.getBoundingClientRect();
         const list = cards.getBoundingClientRect();
-        const size = prev.offsetWidth;
+        const w = prev.offsetWidth; // wider on phones (a pill)
+        const h = prev.offsetHeight;
         let p: [number, number];
         let n: [number, number];
         if (vertical) {
           // one column down the middle of the list; above / below the open card
-          const x = list.left + list.width / 2 - size / 2 - b.left;
-          p = [x, c.top - b.top - ARROW_GAP - size];
+          const x = list.left + list.width / 2 - w / 2 - b.left;
+          p = [x, c.top - b.top - ARROW_GAP - h];
           n = [x, c.bottom - b.top + ARROW_GAP];
         } else {
           // one row across the middle of the fan; left / right of the open card
-          const y = list.top + list.height / 2 - size / 2 - b.top;
-          p = [clamp(c.left - b.left - ARROW_GAP - size, 0, b.width - size), y];
-          n = [clamp(c.right - b.left + ARROW_GAP, 0, b.width - size), y];
+          const y = list.top + list.height / 2 - h / 2 - b.top;
+          p = [clamp(c.left - b.left - ARROW_GAP - w, 0, b.width - w), y];
+          n = [clamp(c.right - b.left + ARROW_GAP, 0, b.width - w), y];
         }
         // straight to the target every frame: they stay right beside the card as it moves
         prev.style.translate = `${ease("prevX", p[0], true)}px ${ease("prevY", p[1], true)}px`;
