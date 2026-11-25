@@ -94,8 +94,9 @@
   color: var(--text);
   text-decoration: none;
 }
-.game-vote-list-name:hover { text-decoration: underline; text-underline-offset: 3px; }
-.game-vote-list-name:hover .external-icon { opacity: 1; }
+/* only the open card's name is a link (GameCard leaves out href on the others) */
+.game-vote-list-name[href]:hover { text-decoration: underline; text-underline-offset: 3px; }
+.game-vote-list-name[href]:hover .external-icon { opacity: 1; }
 /* players (best with) on the left, everyone's interest dice on the right */
 .game-vote-list-meta {
   display: flex;
@@ -303,14 +304,15 @@
 .card-arrow.prev { left: -48px; }
 .card-arrow.next { left: calc(var(--cover-w) + 12px); }
 @keyframes card-arrow-in { from { opacity: 0; } to { opacity: 1; } }
-/* phones (vertical fan): there's no room beside the card, so the arrows sit on
-   the open card's right edge, one above the other, turned to point up (previous)
-   and down (next) like the list. */
+/* phones (vertical fan): the arrows sit above and below the open card instead
+   of beside it, turned to point up (previous) and down (next) like the list.
+   Like on desktop they overlap the neighbouring (blurred) cards; there's no ‹
+   above the first card, so nothing pokes out of the top of the list. */
 @media (max-width: 1023px) {
   .card-arrow.prev,
-  .card-arrow.next { left: auto; right: 10px; }
-  .card-arrow.prev { translate: 0 calc(-100% - 4px); }
-  .card-arrow.next { translate: 0 4px; }
+  .card-arrow.next { left: 50%; right: auto; }
+  .card-arrow.prev { top: -44px; translate: -50% 0; }
+  .card-arrow.next { top: calc(100% + 8px); translate: -50% 0; }
   .card-arrow svg { rotate: 90deg; }
 }
 

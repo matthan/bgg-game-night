@@ -79,18 +79,20 @@ export function GameCard({ game: g, index, selected, me, onSelect, onToggleVote,
           )}
           {/* name (links to BGG), then players (best with) · everyone's interest */}
           <span className="game-vote-list-caption">
+            {/* Only the open card's name is a link: on a closed card there's no
+                href, so clicking the name just opens the card like the rest of it. */}
             <a
               className="game-vote-list-name"
-              href={bggUrl(g.id)}
+              href={selected ? bggUrl(g.id) : undefined}
               target="_blank"
               rel="noreferrer"
               tabIndex={selected ? 0 : -1} // reachable by keyboard on the selected card
-              onClick={(e) => e.stopPropagation()} // opening the link doesn't open/close the card
+              onClick={selected ? (e) => e.stopPropagation() : undefined} // following the link doesn't close the card
               onKeyDown={(e) => e.stopPropagation()}
             >
               {g.name}
               <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="external-icon" aria-hidden />
-              <span className="visually-hidden"> (opens BoardGameGeek in a new tab)</span>
+              {selected && <span className="visually-hidden"> (opens BoardGameGeek in a new tab)</span>}
             </a>
             <span className="game-vote-list-meta">
               <span className="game-vote-list-stats">👥 {formatPlayersAndBest(g)}</span>

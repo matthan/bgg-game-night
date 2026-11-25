@@ -40,11 +40,11 @@ const INTRO_CARD_MS = 750; // each card's own animation
  *   others blur; click it again to close it
  * - vote with the 👍 button only (hover it: "Vote" slides out). Cards you
  *   voted for sit higher (desktop) or further right (phones) than the rest.
- * - ‹ › beside the open card (desktop), or ▲ ▼ on it (phones), step to the
+ * - ‹ › beside the open card (desktop), or above / below it (phones), step to the
  *   previous / next game
  * - click anywhere outside the open card (or press Escape): back to the fan.
  *   Clicking another card opens that one instead.
- * - the game's name on the card links to BoardGameGeek
+ * - the open card's name links to BoardGameGeek (closed cards: no link)
  * - interest is rated on the Rate games page; the cards just show everyone's dice
  *
  * The selection is stored by POSITION, so when a game is hidden and another

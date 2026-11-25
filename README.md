@@ -142,10 +142,10 @@ previous / next game; there's no ‹ on the first game and no › on the last.
 On screens narrower than 1024px (phones, tablets) the fan runs down the page:
 each card shows the top of its box art, the selected card opens to full
 height, and cards you voted for slide to the right. Cards are at most 400px
-wide and the list is centered. The arrows sit on the open card's right edge,
-pointing up (previous) and down (next).
+wide and the list is centered. The arrows sit above (previous) and below
+(next) the open card instead of beside it.
 
-The game's name on the card links to BoardGameGeek (clicking it doesn't vote). Who made the list
+The open card's name links to BoardGameGeek (clicking it doesn't vote); on a closed card the name isn't a link, so clicking it just opens the card. Who made the list
 and when is kept in the page's `<meta name="game-list">` tag.
 
 **Voting:** everyone signed in can vote for any games in the current list
