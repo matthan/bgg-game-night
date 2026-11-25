@@ -1,42 +1,69 @@
 # Production setup for your home server (ZimaOS).
 #
-#   docker compose -f docker-compose.prod.yml up -d --build
-#   App -> http://<server-ip>:8080
+#   docker compose -f docker-compose.prod.yml up -d
+#   App -> http://<server-ip>:8080 (or through Nginx Proxy Manager)
 #
+# - api + web: ready-made images that GitHub Actions builds from main
+#   (.github/workflows/publish.yml). Nothing is built on the server.
 # - web: nginx serving the built React app, forwarding /api to the API
 # - api: compiled Node API, NOT reachable from outside (only via nginx)
+# - watchtower: checks ghcr.io every few minutes and restarts api/web when
+#   there's a new image. It only touches containers labelled below.
 # - the SQLite database is stored in DATA_DIR on the server, so it survives
-#   rebuilds and updates. Back it up by copying that folder.
+#   updates. Back it up by copying that folder.
+#
+# Changes to THIS file (new settings, ports…) aren't picked up automatically:
+# copy it to the server and run the command above again.
+
+x-auto-update: &auto-update
+  com.centurylinklabs.watchtower.enable: "true"
 
 services:
   api:
-    build:
-      context: ./api
-      target: prod
+    image: ghcr.io/matthan/bgg-game-night-api:latest
     env_file:
       - path: .env
         required: false
     environment:
       PORT: 3001
       DB_PATH: /app/data/bgg.sqlite
+      # The site is served over HTTPS (Cloudflare tunnel), so the login cookie
+      # is HTTPS-only. Set SECURE_COOKIES=false in .env to sign in over plain
+      # http://<server-ip>:8080.
+      SECURE_COOKIES: ${SECURE_COOKIES:-true}
     volumes:
       - ${DATA_DIR:-/DATA/AppData/bgg-game-night/data}:/app/data
+    labels: *auto-update
     restart: unless-stopped
 
   web:
-    build:
-      context: ./web
-      target: prod
+    image: ghcr.io/matthan/bgg-game-night-web:latest
     ports:
       - "${WEB_PORT:-8080}:80"
     depends_on:
       - api
+    labels: *auto-update
     restart: unless-stopped
     networks:
       default:
       proxy:
         aliases:
           - bgpicker
+
+  watchtower:
+    # Maintained fork of containrrr/watchtower (archived Dec 2025, and broken
+    # on Docker 29+). Same labels and settings.
+    image: nickfedor/watchtower:latest
+    command: --label-enable --interval ${UPDATE_CHECK_SECONDS:-300} --cleanup
+    environment:
+      TZ: ${TZ:-America/New_York}
+      # If the images are private, `docker login ghcr.io` into this folder
+      # (see README) and Watchtower uses those credentials.
+      DOCKER_CONFIG: /registry-login
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${REGISTRY_LOGIN_DIR:-/DATA/AppData/bgg-game-night/registry-login}:/registry-login:ro
+    restart: unless-stopped
 
 networks:
   proxy:
