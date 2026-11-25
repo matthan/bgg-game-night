@@ -279,12 +279,23 @@
   .game-vote-list-card:not(.selected) .game-vote-list-caption { opacity: 0; }
   .game-vote-list-name { font-size: 22px; }
 }
-/* ---------- ‹ › beside the open card ----------
-   Inside the open card, so they turn and zoom with it: just left of the
-   cover, and just right of it (the cover is wider than the card's slot). */
+/* ---------- ‹ › at the ends of the list ----------
+   They don't follow the open card, so they never move when a card opens or
+   closes: on desktop they sit left and right of the whole fan, vertically
+   centered on it; on phones above and below the list. On desktop their place
+   comes from the fan's width WITH a card open (its widest), kept on the page
+   on narrower screens. */
+.game-vote-list-body {
+  position: relative;
+  --fan-w: calc(var(--intro-count) * var(--slot) + (var(--intro-count) - 1) * 10px + var(--slot-open) - var(--slot));
+  --arrow-gap: 40px; /* from the fan's edge to the arrow */
+}
 .card-arrow {
   position: absolute;
-  top: 50%;
+  top: calc((var(--cover-h) * 1.3 + 40px) / 2); /* middle of the fan's row (.game-vote-list-cards' height) */
+  /* above the closed cards but under the open one (z-index 5): the fan nearly
+     fills the page, so an open FIRST / LAST card reaches over its (disabled)
+     arrow, which is then tucked away behind it */
   z-index: 4;
   display: grid;
   place-items: center;
@@ -297,22 +308,21 @@
   color: var(--text);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
   translate: 0 -50%;
-  animation: card-arrow-in 0.35s ease 0.2s both; /* appear once the card has opened */
-  transition: background 0.2s, transform 0.15s;
+  animation: card-arrow-in 0.35s ease both; /* fade in after the opening animation */
+  transition: background 0.2s, transform 0.15s, opacity 0.2s;
 }
-.card-arrow:hover { background: var(--accent); color: var(--accent-text); transform: scale(1.1); }
-.card-arrow.prev { left: -48px; }
-.card-arrow.next { left: calc(var(--cover-w) + 12px); }
-@keyframes card-arrow-in { from { opacity: 0; } to { opacity: 1; } }
-/* phones (vertical fan): the arrows sit above and below the open card instead
-   of beside it, turned to point up (previous) and down (next) like the list.
-   Like on desktop they overlap the neighbouring (blurred) cards; there's no ‹
-   above the first card, so nothing pokes out of the top of the list. */
+.card-arrow:hover:not(:disabled) { background: var(--accent); color: var(--accent-text); transform: scale(1.1); }
+/* at either end of the list: still there (so nothing shifts), just greyed out */
+.card-arrow:disabled { opacity: 0.3; cursor: default; }
+.card-arrow.prev { left: max(0px, calc(50% - var(--fan-w) / 2 - var(--arrow-gap) - 36px)); }
+.card-arrow.next { right: max(0px, calc(50% - var(--fan-w) / 2 - var(--arrow-gap) - 36px)); }
+@keyframes card-arrow-in { from { opacity: 0; } }
+/* phones (vertical fan): above and below the list, centered, turned to point
+   up (previous) and down (next) */
 @media (max-width: 1023px) {
-  .card-arrow.prev,
-  .card-arrow.next { left: 50%; right: auto; }
-  .card-arrow.prev { top: -44px; translate: -50% 0; }
-  .card-arrow.next { top: calc(100% + 8px); translate: -50% 0; }
+  .card-arrow { position: static; margin: 0 auto; translate: none; }
+  .card-arrow.prev { margin-bottom: 10px; }
+  .card-arrow.next { margin-top: 4px; }
   .card-arrow svg { rotate: 90deg; }
 }
 

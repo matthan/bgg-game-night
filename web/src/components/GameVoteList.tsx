@@ -7,6 +7,8 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import type { ListGame, OwnedGame } from "../types";
 import { GameCard, type BoardGame } from "./GameCard";
 import "./GameVoteList.css";
@@ -40,8 +42,9 @@ const INTRO_CARD_MS = 750; // each card's own animation
  *   others blur; click it again to close it
  * - vote with the 👍 button only (hover it: "Vote" slides out). Cards you
  *   voted for sit higher (desktop) or further right (phones) than the rest.
- * - ‹ › beside the open card (desktop), or above / below it (phones), step to the
- *   previous / next game
+ * - ‹ › at the ends of the list (left / right on desktop, above / below on
+ *   phones) step to the previous / next game. They stay put whatever is
+ *   selected; with nothing open, › opens the first game and ‹ the last.
  * - click anywhere outside the open card (or press Escape): back to the fan.
  *   Clicking another card opens that one instead.
  * - the open card's name links to BoardGameGeek (closed cards: no link)
@@ -64,9 +67,9 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
   const shown = active ?? games[0]; // what the info area under the fan renders (invisibly when nothing's selected)
 
   // Click anywhere outside the cards (including the gaps around them) or press
-  // Escape to deselect. Clicks on a card are left to the card: the open card's
-  // ‹ › arrows and 👍 button, or another card (which opens instead). The
-  // Hide / Replace buttons under the open card keep it open too.
+  // Escape to deselect. Clicks on a card are left to the card: its 👍 button,
+  // or another card (which opens instead). The ‹ › arrows and the Hide /
+  // Replace buttons under the open card keep a card open too.
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       // composedPath: where the click happened, even if that element has since
@@ -76,7 +79,9 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
         .some(
           (el) =>
             el instanceof Element &&
-            (el.classList.contains("game-vote-list-card") || el.classList.contains("game-vote-list-info")),
+            (el.classList.contains("game-vote-list-card") ||
+              el.classList.contains("game-vote-list-info") ||
+              el.classList.contains("card-arrow")),
         );
       if (!onCardOrButtons) setSelected(null);
     };
@@ -177,29 +182,50 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
     setSelected(i === index ? null : i);
   }
 
+  // The ‹ › arrows: one step along the list, stopping at the ends. With
+  // nothing open, › opens the first game and ‹ the last.
+  function step(by: 1 | -1) {
+    if (index === null) setSelected(by > 0 ? 0 : games.length - 1);
+    else setSelected(Math.min(Math.max(index + by, 0), games.length - 1));
+  }
+
   // Arrow keys move the selection along the fan.
   function handleKeyDown(e: KeyboardEvent) {
     // ← → on the desktop, ↑ ↓ on the vertical mobile
     if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"].includes(e.key)) return;
     e.preventDefault();
-    const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
-    setSelected(((index ?? (step > 0 ? -1 : 0)) + step + games.length) % games.length);
+    const dir = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
+    setSelected(((index ?? (dir > 0 ? -1 : 0)) + dir + games.length) % games.length);
   }
 
   return (
     <section id="game-vote-list" className="game-vote-list" aria-label="Game list" ref={rootRef}>
-      <div className="game-vote-list-body">
+      <div
+        className="game-vote-list-body"
+        style={
+          {
+            "--intro-start": `${INTRO_START_MS}ms`,
+            "--intro-stagger": `${INTRO_STAGGER_MS}ms`,
+            "--intro-card": `${INTRO_CARD_MS}ms`,
+            "--intro-count": games.length, // also used by the phone layout and the ‹ › arrows
+          } as CSSProperties
+        }
+      >
+        {!intro && (
+          <button
+            type="button"
+            className="card-arrow prev"
+            onClick={() => step(-1)}
+            disabled={index === 0}
+            aria-label="Previous game"
+            title="Previous game"
+          >
+            <FontAwesomeIcon icon={faChevronLeft} aria-hidden />
+          </button>
+        )}
         <div
           className={`game-vote-list-cards${index !== null ? " has-selection" : ""}${intro ? " intro" : ""}`}
           onKeyDown={handleKeyDown}
-          style={
-            {
-              "--intro-start": `${INTRO_START_MS}ms`,
-              "--intro-stagger": `${INTRO_STAGGER_MS}ms`,
-              "--intro-card": `${INTRO_CARD_MS}ms`,
-              "--intro-count": games.length, // also used by the phone layout
-            } as CSSProperties
-          }
         >
           {intro && (
             <div className="game-vote-list-intro-vote" aria-hidden>
@@ -218,11 +244,22 @@ export function GameVoteList({ games, onToggleHidden, onReplace, me, onToggleVot
               cardRef={(el) => {
                 cardRefs.current[i] = el;
               }}
-              onPrev={i > 0 ? () => setSelected(i - 1) : undefined} // no ‹ on the first game
-              onNext={i < games.length - 1 ? () => setSelected(i + 1) : undefined} // no › on the last
             />
           ))}
         </div>
+        {/* (the ‹ › arrows appear once the opening animation is over) */}
+        {!intro && (
+          <button
+            type="button"
+            className="card-arrow next"
+            onClick={() => step(1)}
+            disabled={index === games.length - 1}
+            aria-label="Next game"
+            title="Next game"
+          >
+            <FontAwesomeIcon icon={faChevronRight} aria-hidden />
+          </button>
+        )}
 
         {/* Under the selected card: Hide and Replace (admin only).
           With nothing selected, the first game's is rendered INVISIBLY, so the
