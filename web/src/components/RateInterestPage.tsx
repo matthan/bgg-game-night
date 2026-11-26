@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import { getMyInterest, setInterest } from "../api";
@@ -40,7 +40,12 @@ export function RateInterestPage({ games, collections, loading, onHide, onUnhide
   // change, so a card doesn't vanish the moment you rate it
   const [justRated, setJustRated] = useState<Set<number>>(new Set());
   const [shown, setShown] = useState(PAGE_SIZE);
-  const sentinel = useRef<HTMLDivElement>(null);
+  // The "load more" marker under the grid. Kept in state (a callback ref), so
+  // the observer below is set up whenever the marker appears. It's only drawn
+  // once your ratings have loaded; with a plain ref, opening this page from the
+  // menu (games already loaded, ratings not yet) never observed it, and the
+  // page stopped at the first 48 cards.
+  const [sentinel, setSentinel] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
     getMyInterest()
@@ -72,14 +77,13 @@ export function RateInterestPage({ games, collections, loading, onHide, onUnhide
 
   // Load more cards when the bottom of the grid comes into view.
   useEffect(() => {
-    const el = sentinel.current;
-    if (!el) return;
+    if (!sentinel) return;
     const io = new IntersectionObserver((entries) => entries[0].isIntersecting && setShown((n) => n + PAGE_SIZE), {
       rootMargin: "600px",
     });
-    io.observe(el);
+    io.observe(sentinel);
     return () => io.disconnect();
-  }, [visible.length, shown]);
+  }, [sentinel, visible.length, shown]);
 
   const ratedCount = mine ? all.filter((g) => mine[g.id] !== undefined).length : 0;
 
@@ -253,7 +257,7 @@ export function RateInterestPage({ games, collections, loading, onHide, onUnhide
           {unratedOnly ? "You've rated every game here. Nice!" : "No games match. Try a different search."}
         </p>
       )}
-      {mine && shown < visible.length && <div ref={sentinel} className="rate-more" aria-hidden />}
+      {mine && shown < visible.length && <div ref={setSentinel} className="rate-more" aria-hidden />}
     </section>
   );
 }
